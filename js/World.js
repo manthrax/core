@@ -1,0 +1,197 @@
+import {Vector3, Object3D} from "https://threejs.org/build/three.module.js";
+
+export default class World {
+    constructor(scene, gridSz=10, visRad=5) {
+        let rad = visRad;
+        this.origin = new Vector3()
+        this.scene = scene;
+        this.gridSize = gridSz;
+        let {abs, sin, cos, min, max, floor} = Math
+
+        //let gkey = (p)=>`${p.x},${p.z}`
+        //let mkey = (p)=>`${floor(p.x/gridSz)},${floor(p.z/gridSz)}`
+        //let k2c = (k)=> k.split(',').map(e=>parseInt(e))
+
+        let map = this.map = {}
+        let visible = {}
+        let targetSector;
+        let nv3 = (x,y,z)=>new Vector3(x,y,z)
+        let tv0 = nv3()
+        let tv1 = nv3()
+
+        let gkey = (p)=>((p.x << 16) & 0xffff0000) | (p.z & 0x0000ffff)
+        let mkey = (p)=>((floor(p.x / gridSz) << 16) & 0xffff0000) | (floor(p.z / gridSz) & 0x0000ffff)
+        let key2coordinate = this.key2coordinate = (k)=>nv3((k >> 16), 0, (k & 0x0000ffff) | ((k & 0x8000) ? 0xffff0000 : 0))
+        let selection = this.selection = []
+
+
+        let getSector = this.getSector = (k)=>{
+            let mk = map[k]
+            if (mk)
+                return mk;
+
+            mk = map[k] = {
+                key: k,
+                objects: [],
+                coordinate: key2coordinate(k)
+            }
+            mk.position = mk.coordinate.clone().multiplyScalar(gridSz)
+
+            mk.root = new Object3D()
+            mk.root.position.copy(mk.position)
+            scene.add(mk.root)
+            mk.root.updateMatrixWorld();
+            (!visible[mk.key]) && scene.remove(mk.root)
+            return mk
+        }
+
+        let ksector = (k)=>{
+            let mk = map[k]
+            if (!mk) {
+                mk = getSector(k)
+                this.sectorGenerator(mk);
+            }
+            return mk
+        }
+        let gsector = (p)=>{
+            let k = gkey(p);
+            return ksector(k)
+        }
+        let sectorAt = (p)=>ksector(mkey(p))
+        let nbtab = []
+        for (let x = -rad; x <= rad; x++)
+            for (let z = -rad; z <= rad; z++)
+                nbtab.push(nv3(x, 0, z))
+        let neighbors = (sec)=>nbtab.map(e=>gsector(tv0.copy(sec.coordinate).add(e)))
+
+        let list_add = (obj,list,field)=>{
+            if (obj[field] !== undefined)
+                return
+            obj[field] = list.length
+            list.push(obj);
+        }
+        let list_remove = (obj,list,field)=>{
+            if (obj[field] === undefined)
+                return;
+            let top = list.pop()
+            if (obj[field] < list.length) {
+                top[field] = obj[field];
+                list[obj[field]] = top;
+            }
+            delete obj[field]
+        }
+        this.topObject = 0;
+        this.objects = {}
+
+        this.addToSector = (obj,sec)=>{
+            obj.sector = sec;
+            list_add(obj, sec.objects, 'objectIndex')
+            return obj
+        }
+        this.select = (obj,selected)=>{
+            if(obj.isMesh)obj=this.objects[obj.userData.objectId]
+            let fn = selected ? list_add : list_remove
+            fn(obj, this.selection, 'selectionIndex')
+        }
+        this.moveSector = (obj)=>{
+
+            let sec = sectorAt(obj.position)
+            obj.sector && list_remove(obj, obj.sector.objects, 'objectIndex')
+
+            this.addToSector(obj, sec)
+
+            obj.view && sec.root.attach(obj.view)
+            if (!visible[sec.key]) {
+                obj.dynamic && list_remove(obj, dynamics, 'dynamicIndex')
+            }
+        }
+        this.add = (obj)=>{
+            let sec = sectorAt(obj.position)
+            this.addToSector(obj, sec)
+        }
+        this.move = (obj,mvec)=>{
+            obj.view.position.add(mvec);
+            obj.position.add(mvec)
+            if ((obj.view.position.x < 0) || (obj.view.position.z < 0) || (obj.view.position.x >= gridSz) || (obj.view.position.z >= gridSz)) {
+                this.moveSector(obj)
+            }
+        }
+        this.reset = ()=>{
+            for (let k in map) {
+                let s = map[k]
+                s.root && s.root.parent && s.root.parent.remove(s.root)
+            }
+            map = this.map = {}
+            targetSector = undefined
+            dynamics = this.dynamics = []
+            selection = this.selection = []
+            visible = {}
+        }
+this.cloneObject=(obj)=>{
+   let nob = {
+      src:obj.src,
+      position:obj.position?obj.position.clone():undefined,
+      rotation:obj.rotation?obj.rotation.clone():undefined,
+      flags:obj.flags,
+      sector: obj.sector
+   }
+  return  this.spawn(obj.sector,nob)
+  // return nobs
+}
+        let dynamics = this.dynamics = []
+        let setVisible = (sector,is)=>{
+            scene[is ? 'add' : 'remove'](sector.root)
+            if (is) {
+                visible[sector.key] = sector;
+                sector.objects.map(obj=>(!obj.view) && this.spawn(sector, obj))
+                sector.objects.forEach(obj=>(obj.dynamic) && list_add(obj, dynamics, 'dynamicIndex'))
+            } else {
+                sector.objects.forEach(obj=>(obj.dynamic) && list_remove(obj, dynamics, 'dynamicIndex'))
+                delete visible[sector.key];
+            }
+        }
+
+        let dframe = []
+        this.update = (target)=>{
+            if (!this.sectorGenerator)
+                return;
+
+            let sec = sectorAt(target)
+
+            this.beginFrame && this.beginFrame()
+
+            if (targetSector !== sec) {
+                this.targetSectorChanged && this.targetSectorChanged(sec)
+                let n = neighbors(sec);
+                let nvis = {}
+                n.forEach(e=>nvis[e.key] = true)
+                Object.keys(visible).map(k=>(!nvis[k]) && setVisible(visible[k], false))
+                n.forEach(e=>(!visible[e.key]) && setVisible(e, true))
+                targetSector = sec
+
+            }
+            let now = performance.now() / 1000.
+            for (let i = 0; i < dynamics.length; i++)
+                dframe[i] = dynamics[i]
+            for (let i = 0, o = dframe[0]; i < dynamics.length; i++,
+            o = dframe[i]) {
+                if (o.update)
+                    o.update()
+                else {
+                    o.view.position.y = abs(sin((now + i) * 10.)) * .05
+                    o.view.rotation.y += .01;
+                    o.position && (o.view.position.y += o.position.y)
+                }
+            }
+        }
+
+        this.commands={}
+        this.docmd=(...args) => this.commands[args[0]] && this.commands[args[0]](args)        
+        this.defcmd=(name,fn) => this.commands[name]=fn
+
+
+
+//    world.defcmd('list', (p)=>)
+
+    }
+}

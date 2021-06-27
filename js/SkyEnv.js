@@ -1,0 +1,237 @@
+import*as THREE from "https://threejs.org/build/three.module.js";
+import {Sky} from 'https://threejs.org/examples/jsm/objects/Sky.js';
+
+let lights;
+import NebulaMaterial from './Nebula.js'
+
+export default class SkyEnv {
+
+    constructor(ctx) {
+        let {renderer, scene, world} = ctx;
+
+        /*
+    let pmremGenerator = new THREE.PMREMGenerator(renderer);
+    pmremGenerator.compileEquirectangularShader();
+    new RGBELoader().load(//"https://cdn.glitch.com/98e0326e-ecbf-44ed-bd5a-0b0d40b0cee8%2Fstudio_small_07_1k.hdr?v=1621085795290"
+    "./art/green_point_park_1k.hdr"//"https://cdn.glitch.com/98e0326e-ecbf-44ed-bd5a-0b0d40b0cee8%2Fvenice_sunset_2k.hdr?v=1621085945412"
+    , texture=>{
+        const envMap = pmremGenerator.fromEquirectangular(texture).texture;
+        pmremGenerator.dispose();
+        scene.environment = envMap;
+        scene.background = envMap
+    }
+    );
+    */
+        let lights = new THREE.Object3D();
+        let shadowLight;
+        let helper
+        let setupLights = ()=>{
+
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+            shadowLight = new THREE.DirectionalLight("white",1);
+            shadowLight.shadow.enabled = true;
+
+            /*
+    let timeOfDay = 930 //1015
+    let azim = 0 // -110
+    light.position.setFromSpherical({
+        radius: 15,
+        phi: timeOfDay * Math.PI * 2 / 1200,
+        theta: azim * Math.PI / 180
+    })*/
+            //set(7, 14, 5);
+            // default THREE.PCFShadowMap
+            lights.add(shadowLight);
+            lights.add(shadowLight.target)
+            shadowLight.castShadow = true;
+
+            //Set up shadow properties for the light
+            shadowLight.shadow.mapSize.width = 2048;
+            shadowLight.shadow.mapSize.height = 2048;
+            shadowLight.shadow.radius = 0;
+            shadowLight.shadow.bias = -0.0005;
+            let lc = shadowLight.shadow.camera;
+            lc.near = 0.5;
+            lc.far = 100;
+            lc.left = lc.bottom = -32;
+            lc.right = lc.top = 32;
+            lc.updateProjectionMatrix();
+            /*
+    let light1 = new THREE.PointLight(0xff0000,0.1,20,2);
+    lights.add(light1);
+    light1.position.set(1, 2, 1);
+
+    let light2 = new THREE.PointLight(0x00ffff,0.1,20,2);
+    lights.add(light2);
+    light2.position.set(-1, 2, -1);
+*/
+            scene.add(lights);
+
+            helper = new THREE.DirectionalLightHelper(shadowLight)
+
+            scene.add(helper)
+
+        }
+        this.targetChanged = (pos)=>{
+            lights.position.set(pos.x, lights.position.y, pos.z)
+        }
+        setupLights()
+        // Add Sky
+        let sky = new Sky();
+        //    sky.scale.setScalar(450000);
+
+        NebulaMaterial.create(false, 'starswamp.snip').then((mat)=>{
+            //
+
+            mat.fragmentShader = mat.fragmentShader.slice(0, mat.fragmentShader.lastIndexOf('}')) + `
+    #include <tonemapping_fragment>
+	#include <encodings_fragment>
+	#include <fog_fragment>
+	#include <premultiplied_alpha_fragment>
+	#include <dithering_fragment>
+}
+            `
+            /*
+            mat = new THREE.MeshBasicMaterial({color:'red'})
+            mat.onBeforeCompile=function(a,b,c){
+                    let fs = a.fragmentShader.slice( 0,a.fragmentShader.lastIndexOf('gl_FragColor'))
+            fs += `
+            outgoingLight.rgb=vec3(1.,0.,1.);
+gl_FragColor = vec4( outgoingLight, diffuseColor.a );
+	#include <tonemapping_fragment>
+	#include <encodings_fragment>
+	#include <fog_fragment>
+	#include <premultiplied_alpha_fragment>
+	#include <dithering_fragment>
+}
+            `
+            a.fragmentShader=fs;
+            }
+
+                       mat = new THREE.ShaderMaterial({fragmentShader:`
+void main(){
+    gl_FragColor=vec4(0.,0.,1.,1.);	
+    #include <tonemapping_fragment>
+	#include <encodings_fragment>
+	#include <fog_fragment>
+	#include <premultiplied_alpha_fragment>
+	#include <dithering_fragment>
+}
+            `})
+*/
+            mat.side = THREE.DoubleSide
+            //mat.depthWrite = false
+            this.nightScene = new THREE.Mesh(new THREE.BoxGeometry(1,1,1),mat)
+            //,mat);
+            //this.nightSky.nebulaMaterial );// //
+
+            //            this.clone = new THREE.Mesh(new THREE.SphereGeometry(1,32,32),mat);//this.nightScene.clone();
+            //            scene.add(this.clone)
+
+            //           this.clone.scale.setScalar(50)
+            //           this.clone.material = mat
+            //           this.nightScene.frustumCulled = false;
+            //this.nightScene.scale.setScalar(450000);
+
+            //    		this.nightScene.scale.multiplyScalar(45000)
+            //this.nightScene.scale.multiplyScalar(10)
+            //this.nightScene.material = this.nightSky.energyImpactMaterial
+            if (this.clone)
+                this.clone.onBeforeRender = function() {
+                    this.material.uniforms && this.material.uniforms.uTime && (this.material.uniforms.uTime.value = performance.now() / 1000.)
+                }
+
+            this.nightScene.onBeforeRender = function() {
+            }
+        }
+        )
+
+        //scene.add(sky);
+
+        let sun = new THREE.Vector3();
+
+        /// GUI
+
+        const effectController = {
+            turbidity: 3.4,
+            //10,
+            rayleigh: 1,
+            //3,
+            mieCoefficient: 0.06,
+            //0.005,
+            mieDirectionalG: .7,
+            //0.7,
+            elevation: 80,
+            azimuth: 100,
+            //180,
+            exposure: renderer.toneMappingExposure
+        };
+
+        const pmremGenerator = new THREE.PMREMGenerator(renderer);
+        this.update = (rseed)=>{
+
+            const uniforms = sky.material.uniforms;
+            uniforms['turbidity'].value = effectController.turbidity;
+            uniforms['rayleigh'].value = effectController.rayleigh;
+            uniforms['mieCoefficient'].value = effectController.mieCoefficient;
+            uniforms['mieDirectionalG'].value = effectController.mieDirectionalG;
+
+            //effectController.elevation = (performance.now() / 500)%90;
+
+            const phi = THREE.MathUtils.degToRad(90 - effectController.elevation);
+            const theta = THREE.MathUtils.degToRad(effectController.azimuth);
+
+            sun.setFromSphericalCoords(1, phi, theta);
+
+            uniforms['sunPosition'].value.copy(sun);
+
+            renderer.toneMappingExposure = effectController.exposure;
+            //renderer.render(scene, camera);
+            if (shadowLight) {
+                shadowLight.position.copy(sun).multiplyScalar(14)
+                //shadowLight.lookAt(shadowLight.target.position)
+                // helper.lookAt(lights.position)
+                helper.update()
+            }
+            //if( this.nightSky.nebulaMaterial)
+            this.nightScene && this.nightScene.material.randomize && this.nightScene.material.randomize(rseed||(((Math.random() * 1000.) | 0)));
+
+            scene.background = scene.environment = pmremGenerator.fromScene(this.nightScene || sky).texture;
+
+            //this.nightScene.material = this.nightSky.nebulaMaterial
+            //
+            // pmremGenerator.dispose();
+
+            //     scene.environment = envMap;
+        }
+
+        this.update();
+
+        //            scene.background = scene.environment = pmremGenerator.fromScene(this.nightScene || sky).texture;
+
+        world.defcmd('sky', (p)=>{
+
+			let gseed = NebulaMaterial.genSeed
+            if (p[1]) {
+                NebulaMaterial.rng.seed = parseFloat(p[1])
+                this.update(NebulaMaterial.rng.seed)
+            }
+            world.docmd('info', '' + gseed)
+        }
+        )
+
+        document.addEventListener('keydown', (e)=>{
+            if (e.code == 'BracketLeft') {
+                effectController.elevation += 1;
+                this.update()
+
+            } else if (e.code == 'BracketRight') {
+                effectController.elevation -= 1;
+                this.update()
+            }
+        }
+        )
+    }
+}
