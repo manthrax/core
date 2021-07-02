@@ -1,5 +1,12 @@
 
 export default class PRNG {
+
+    static wichmannHillRNG = (s1 = 100, s2 = 100, s3 = 100) => () =>
+    ((s1 = (171 * s1) % 30269) / 30269 +
+      (s2 = (172 * s1) % 30307) / 30307 +
+      (s3 = (170 * s1) % 30323) / 30323) %
+    1;
+
     static SinRNG(seed) {
         return {
             seed: (seed === undefined) ? (+new Date() + Math.random()) : seed,

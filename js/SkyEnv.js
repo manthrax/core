@@ -1,13 +1,13 @@
-import*as THREE from "https://threejs.org/build/three.module.js";
+//import*as THREE from "https://threejs.org/build/three.module.js";
 import {Sky} from 'https://threejs.org/examples/jsm/objects/Sky.js';
 
 let lights;
 import NebulaMaterial from './Nebula.js'
 
-export default class SkyEnv {
-
-    constructor(ctx) {
-        let {renderer, scene, world} = ctx;
+export default function SkyEnv(ctx) {
+    return new Promise((resolve,reject)=>{
+        let self = {}
+        let {renderer, scene, world, THREE} = ctx;
 
         /*
     let pmremGenerator = new THREE.PMREMGenerator(renderer);
@@ -22,13 +22,39 @@ export default class SkyEnv {
     }
     );
     */
+        let rttCamera
+        let _clearColor = new THREE.Color();
+        let renderToTarget = (renderer,object,camera,target)=>{
+
+            const originalAutoClear = renderer.autoClear;
+            const outputEncoding = renderer.outputEncoding;
+            const toneMapping = renderer.toneMapping;
+            renderer.getClearColor(_clearColor);
+            renderer.toneMapping = THREE.NoToneMapping;
+            renderer.outputEncoding = THREE.LinearEncoding;
+            renderer.autoClear = false;
+            renderer.setRenderTarget(target);
+            renderer.render(object, camera);
+            renderer.setRenderTarget(null);
+            renderer.toneMapping = toneMapping;
+            renderer.outputEncoding = outputEncoding;
+            renderer.autoClear = originalAutoClear;
+        }
+
+        let fsPlane = new THREE.Mesh(new THREE.PlaneBufferGeometry(),new THREE.ShaderMaterial({
+            side: THREE.DoubleSide
+        }));
+
         let lights = new THREE.Object3D();
-        let shadowLight;
+        let shadowLight, ambientLight;
         let helper
         let setupLights = ()=>{
 
             renderer.shadowMap.enabled = true;
             renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+            //ambientLight = new THREE.AmbientLight("white",1000);
+            //lights.add(ambientLight)
 
             shadowLight = new THREE.DirectionalLight("white",1);
             shadowLight.shadow.enabled = true;
@@ -69,12 +95,11 @@ export default class SkyEnv {
 */
             scene.add(lights);
 
-            helper = new THREE.DirectionalLightHelper(shadowLight)
-
-            scene.add(helper)
+            //helper = new THREE.DirectionalLightHelper(shadowLight)
+            //scene.add(helper)
 
         }
-        this.targetChanged = (pos)=>{
+        self.targetChanged = (pos)=>{
             lights.position.set(pos.x, lights.position.y, pos.z)
         }
         setupLights()
@@ -123,28 +148,29 @@ void main(){
 */
             mat.side = THREE.DoubleSide
             //mat.depthWrite = false
-            this.nightScene = new THREE.Mesh(new THREE.BoxGeometry(1,1,1),mat)
+            self.nightScene = new THREE.Mesh(new THREE.BoxGeometry(1,1,1),mat)
             //,mat);
-            //this.nightSky.nebulaMaterial );// //
+            //self.nightSky.nebulaMaterial );// //
 
-            //            this.clone = new THREE.Mesh(new THREE.SphereGeometry(1,32,32),mat);//this.nightScene.clone();
-            //            scene.add(this.clone)
+            //            self.clone = new THREE.Mesh(new THREE.SphereGeometry(1,32,32),mat);//self.nightScene.clone();
+            //            scene.add(self.clone)
 
-            //           this.clone.scale.setScalar(50)
-            //           this.clone.material = mat
-            //           this.nightScene.frustumCulled = false;
-            //this.nightScene.scale.setScalar(450000);
+            //           self.clone.scale.setScalar(50)
+            //           self.clone.material = mat
+            //           self.nightScene.frustumCulled = false;
+            //self.nightScene.scale.setScalar(450000);
 
-            //    		this.nightScene.scale.multiplyScalar(45000)
-            //this.nightScene.scale.multiplyScalar(10)
-            //this.nightScene.material = this.nightSky.energyImpactMaterial
-            if (this.clone)
-                this.clone.onBeforeRender = function() {
-                    this.material.uniforms && this.material.uniforms.uTime && (this.material.uniforms.uTime.value = performance.now() / 1000.)
+            //    		self.nightScene.scale.multiplyScalar(45000)
+            //self.nightScene.scale.multiplyScalar(10)
+            //self.nightScene.material = self.nightSky.energyImpactMaterial
+            if (self.clone)
+                self.clone.onBeforeRender = function() {
+                    self.material.uniforms && self.material.uniforms.uTime && (self.material.uniforms.uTime.value = performance.now() / 1000.)
                 }
 
-            this.nightScene.onBeforeRender = function() {
-            }
+            self.nightScene.onBeforeRender = function() {}
+
+            resolve(self)
         }
         )
 
@@ -170,8 +196,8 @@ void main(){
         };
 
         const pmremGenerator = new THREE.PMREMGenerator(renderer);
-        this.update = (rseed)=>{
-
+        self.update = (rseed)=>{
+            console.log(rseed)
             const uniforms = sky.material.uniforms;
             uniforms['turbidity'].value = effectController.turbidity;
             uniforms['rayleigh'].value = effectController.rayleigh;
@@ -193,45 +219,81 @@ void main(){
                 shadowLight.position.copy(sun).multiplyScalar(14)
                 //shadowLight.lookAt(shadowLight.target.position)
                 // helper.lookAt(lights.position)
-                helper.update()
+                helper && helper.update()
             }
-            //if( this.nightSky.nebulaMaterial)
-            this.nightScene && this.nightScene.material.randomize && this.nightScene.material.randomize(rseed||(((Math.random() * 1000.) | 0)));
+            //if( self.nightSky.nebulaMaterial)
+            self.nightScene && self.nightScene.material.randomize && self.nightScene.material.randomize(rseed || (((Math.random() * 1000.) | 0)));
 
-            scene.background = scene.environment = pmremGenerator.fromScene(this.nightScene || sky).texture;
+            let lastMap = scene.environment
+            let nextMap = pmremGenerator.fromScene(self.nightScene || sky).texture;
 
-            //this.nightScene.material = this.nightSky.nebulaMaterial
+            if (lastMap && nextMap) {
+                if (!this.envTween) {
+
+                    let w = nextMap.image.width
+                    let h = nextMap.image.height
+
+                    rttCamera = new THREE.OrthographicCamera(-w,h,w,-h,-1,1);
+
+                    this.envTween = new THREE.WebGLRenderTarget(w,h,{
+                        depthBuffer: false,
+                        magFilter: THREE.NearestFilter,
+                        minFilter: THREE.NearestFilter,
+                        generateMipmaps: false,
+                        type: THREE.UnsignedByteType,
+                        format: THREE.RGBEFormat,
+                        encoding: THREE.RGBEEncoding,
+                    })
+
+                }
+                scene.background = scene.environment = null;
+                renderToTarget(renderer, fsPlane, rttCamera, this.envTween)
+                scene.background = scene.environment = nextMap;
+                //this.envTween.texture
+            } else {
+                scene.background = scene.environment = nextMap;
+            }
+            //self.nightScene.material = self.nightSky.nebulaMaterial
             //
             // pmremGenerator.dispose();
 
             //     scene.environment = envMap;
         }
 
-        this.update();
+        self.update();
 
-        //            scene.background = scene.environment = pmremGenerator.fromScene(this.nightScene || sky).texture;
+        //            scene.background = scene.environment = pmremGenerator.fromScene(self.nightScene || sky).texture;
 
         world.defcmd('sky', (p)=>{
 
-			let gseed = NebulaMaterial.genSeed
+            let gseed = NebulaMaterial.genSeed
             if (p[1]) {
                 NebulaMaterial.rng.seed = parseFloat(p[1])
-                this.update(NebulaMaterial.rng.seed)
+                self.update(NebulaMaterial.rng.seed)
             }
             world.docmd('info', '' + gseed)
         }
         )
 
+        document.addEventListener('generate-nebula', (e)=>{
+            self.update(e.detail.seed)
+        }
+        )
+        let triggerUpdate=(newSeed)=>{
+			document.dispatchEvent(new CustomEvent('generate-nebula',{detail:{seed:newSeed}}))
+        }
         document.addEventListener('keydown', (e)=>{
             if (e.code == 'BracketLeft') {
                 effectController.elevation += 1;
-                this.update()
+                triggerUpdate(effectController.elevation)
 
             } else if (e.code == 'BracketRight') {
                 effectController.elevation -= 1;
-                this.update()
+                triggerUpdate(effectController.elevation)
             }
         }
         )
     }
+    )
+
 }

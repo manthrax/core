@@ -1,11 +1,22 @@
 import {Vector3, Object3D} from "https://threejs.org/build/three.module.js";
 
+let gridSz;
+let rad;
 export default class World {
-    constructor(scene, gridSz=10, visRad=5) {
-        let rad = visRad;
+    set gridSize(v) {
+        gridSz = v;
+    }
+    get gridSize() {
+        return gridSz;
+    }
+    set visibleTileCount(v) {
+        rad = v;
+    }
+    constructor(scene, igridSz=10, visRad=5) {
+        this.visibleTileCount = visRad;
+        this.gridSize = igridSz;
         this.origin = new Vector3()
         this.scene = scene;
-        this.gridSize = gridSz;
         let {abs, sin, cos, min, max, floor} = Math
 
         //let gkey = (p)=>`${p.x},${p.z}`
@@ -23,7 +34,6 @@ export default class World {
         let mkey = (p)=>((floor(p.x / gridSz) << 16) & 0xffff0000) | (floor(p.z / gridSz) & 0x0000ffff)
         let key2coordinate = this.key2coordinate = (k)=>nv3((k >> 16), 0, (k & 0x0000ffff) | ((k & 0x8000) ? 0xffff0000 : 0))
         let selection = this.selection = []
-
 
         let getSector = this.getSector = (k)=>{
             let mk = map[k]
@@ -89,7 +99,7 @@ export default class World {
             return obj
         }
         this.select = (obj,selected)=>{
-            if(obj.isMesh)obj=this.objects[obj.userData.objectId]
+            if(obj.type) debugger
             let fn = selected ? list_add : list_remove
             fn(obj, this.selection, 'selectionIndex')
         }
@@ -106,10 +116,13 @@ export default class World {
             }
         }
         this.add = (obj)=>{
+            if (obj.view && (obj.view.userData.objectId == undefined))
+                this.objects[obj.view.userData.objectId = this.topObject++] = obj
             let sec = sectorAt(obj.position)
             this.addToSector(obj, sec)
         }
         this.move = (obj,mvec)=>{
+            //(obj.userData) && (obj=this.objects[obj.userData.objectId])
             obj.view.position.add(mvec);
             obj.position.add(mvec)
             if ((obj.view.position.x < 0) || (obj.view.position.z < 0) || (obj.view.position.x >= gridSz) || (obj.view.position.z >= gridSz)) {
@@ -127,23 +140,44 @@ export default class World {
             selection = this.selection = []
             visible = {}
         }
-this.cloneObject=(obj)=>{
-   let nob = {
-      src:obj.src,
-      position:obj.position?obj.position.clone():undefined,
-      rotation:obj.rotation?obj.rotation.clone():undefined,
-      flags:obj.flags,
-      sector: obj.sector
-   }
-  return  this.spawn(obj.sector,nob)
-  // return nobs
-}
+
+        /*
+        let spawnContext={}
+        let spawnEvt = new CustomEvent('spawn',{detail:spawnContext})
+        this.spawn=(sec,nob)=>{
+            document.dispatchEvent(spawnEvt);
+            if(!spawnContext.view){
+
+            }
+        }*/
+
+        let topObj = 0;
+        let spawnView = (obj,inst)=>{
+            obj.position && inst.position.copy(obj.position)
+            obj.rotation && inst.rotation.set(obj.rotation.x, obj.rotation.y, obj.rotation.z)
+            obj.sector.root.attach(inst)
+            obj.view = inst;
+            inst.userData.objectId = topObj++;
+            this.objects[inst.userData.objectId] = obj;
+            return inst;
+        }
+        this.cloneObject = (obj)=>{
+            let nob = {
+                src: obj.src,
+                sector: obj.sector
+            }
+            obj.position && (nob.position=obj.position.clone())
+            obj.rotation && (nob.rotation=obj.rotation.clone())
+            obj.flags && (nob.flags=obj.flags);
+            return spawnView(nob, this.spawn(nob.sector, nob))
+            // return nobs
+        }
         let dynamics = this.dynamics = []
         let setVisible = (sector,is)=>{
             scene[is ? 'add' : 'remove'](sector.root)
             if (is) {
                 visible[sector.key] = sector;
-                sector.objects.map(obj=>(!obj.view) && this.spawn(sector, obj))
+                sector.objects.map(obj=>(!obj.view) && spawnView(obj, this.spawn(sector, obj)))
                 sector.objects.forEach(obj=>(obj.dynamic) && list_add(obj, dynamics, 'dynamicIndex'))
             } else {
                 sector.objects.forEach(obj=>(obj.dynamic) && list_remove(obj, dynamics, 'dynamicIndex'))
@@ -185,13 +219,10 @@ this.cloneObject=(obj)=>{
             }
         }
 
-        this.commands={}
-        this.docmd=(...args) => this.commands[args[0]] && this.commands[args[0]](args)        
-        this.defcmd=(name,fn) => this.commands[name]=fn
+        this.commands = {}
+        this.docmd = (...args)=>this.commands[args[0]] && this.commands[args[0]](args)
+        this.defcmd = (name,fn)=>this.commands[name] = fn
 
-
-
-//    world.defcmd('list', (p)=>)
-
+        //    world.defcmd('list', (p)=>)
     }
 }

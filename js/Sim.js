@@ -73,7 +73,6 @@ world.defcmd('help', (p)=>{
         categories.veh.forEach(e=>(e.dynamic = true) && (e.update = vehUpdate))
 
         let tileObj = 'vox/scene_grass'
-let topObj = 0;
 prefabs[tileObj].flags = 1;
 
 let computeStaticBounds= (inst)=>{
@@ -97,18 +96,10 @@ let computeStaticBounds= (inst)=>{
         world.spawn = (mk,obj)=>{
             let pf = prefabs[obj.src]
             let inst = pf.object.clone()
-            obj.position && inst.position.copy(obj.position)
-            obj.rotation && inst.rotation.set(obj.rotation.x, obj.rotation.y, obj.rotation.z)
-            mk.root.attach(inst)
+
             pf.dynamic && (obj.dynamic = true)
             pf.update && (obj.update = pf.update)
-            obj.view = inst;
-            inst.userData.objectId = topObj++;
-            
-            world.objects[inst.userData.objectId] = obj;
-
       //      (!pf.dynamic) && computeStaticBounds(inst)
-
 
             return inst;
         }
