@@ -46,21 +46,17 @@ import {VerticalBlurShader} from "https://threejs.org/examples/jsm/shaders/Verti
 import {VignetteShader} from "https://threejs.org/examples/jsm/shaders/VignetteShader.js"
 
 import {FXAAShader} from "https://threejs.org/examples/jsm/shaders/FXAAShader.js"
+
+
 import Easing from "./Easing.js"
 
 import { GUI } from 'https://threejs.org/examples/jsm/libs/dat.gui.module.js';
 
-export default function PostProcessing(engine, core) {
+export default function PostProcessing(engine) {
 
     var ctx = this;
     let THREE = engine.THREE;
-
     this.engine = engine;
-    core = this.core = {
-        listen: (e,fn)=>{
-            document.addEventListener(e, fn)
-        }
-    };
 
     var camera, scene, renderer;
     var composer;
@@ -90,7 +86,7 @@ export default function PostProcessing(engine, core) {
             passes.renderPass.camera = c;
         }
     }
-
+/*
     ctx.setPassActivation = function(passName, active) {
         //        active = false;
         if (this.activePasses[passName] != active) {
@@ -109,7 +105,7 @@ export default function PostProcessing(engine, core) {
             return pass.uniforms[param].value;
         }
     }
-
+*/
     //-----------------------------------------------------------
 
     ctx.init = function init() {
@@ -129,7 +125,8 @@ export default function PostProcessing(engine, core) {
 
     function applyBinding(b) {
         var pass = passes[b.passName];
-        var uniform = pass.uniforms[b.uName];
+        var uniform = pass.uniforms && pass.uniforms[b.uName];
+        (!uniform) && (uniform=b.src);
         var prev;
         if (b.uField !== 'value') {
             prev = uniform.value[b.uField];
@@ -138,11 +135,13 @@ export default function PostProcessing(engine, core) {
             prev = uniform.value;
             uniform.value = b.value;
         }
-        if (prev != uniform.value)
-            pass.uniformsNeedUpdate = true;
+        if (prev != uniform.value){
+            //pass.uniformsNeedUpdate = true;
+            //b.src.shader && (b.src.shader.needsUpdate = true);
+        }
     }
 
-    function doUniformBinding(passName, uName, uField, curValue) {
+    function doUniformBinding(passName, uName, uField, curValue, src) {
         var uField = uField ? uField : 'value';
         var key = passName + ":" + uName + ":" + uField;
         var b = ctx.uniformBindings[key];
@@ -155,7 +154,8 @@ export default function PostProcessing(engine, core) {
             key: key,
             passName: passName,
             uName: uName,
-            uField: uField
+            uField: uField,
+            src
         }
         b.value = curValue;
         applyBinding(b);
@@ -180,7 +180,7 @@ export default function PostProcessing(engine, core) {
     }
 
 engine.gui = new GUI();
-
+    ctx.enabled = false;
     ctx.rebuildGUI = function() {
         // Init control Panel
         for (var i = 0; i < ctx.passList.length; i++)
@@ -191,70 +191,73 @@ engine.gui = new GUI();
             return;
         }
         var gui = engine.gui;
-        // new dat.GUI();
         var f1 = gui.addFolder('PostProcessing');
+
+        f1.add(ctx, 'enabled', false,true, false).name('enabled').onChange((nv)=>{ });
+
         for (const i in ctx.activePasses) {
             if (!Object.prototype.hasOwnProperty.call(ctx.activePasses, i))
                 continue;
             var fld = f1.addFolder(i);
-            var chkbox = fld.add(ctx.activePasses, i).onChange(()=>{
-                //Pass activation changed... Checkbox toggled...
-                ctx.composerNeedsUpdate = true;
-            }
-            );
-            var pname = `${i}Pass`;
-            let pun = passes[pname].uniforms
-            // if(pname==='adaptiveToneMappingPass') 
-            //   pun = passes[pname].adaptLuminanceShader.uniforms;
 
-            for (let e in passes[pname]) {
-                let npun = {}
-                if (passes[pname][e] && passes[pname][e].isShaderPass) {
-                    for (i in pun)
-                        npun[i] = pun[i]
+            //Pass activation changed... Checkbox toggled...
+            var chkbox = fld.add(ctx.activePasses, i).onChange(()=>{ctx.composerNeedsUpdate = true;});
+            
+            var pname = `${i}Pass`;
+            let pass = passes[pname]
+            let pun = {}
+
+            for( let u in pass.uniforms){
+                console.log(pname+':uniforms:value')
+                pun[u]={pass,shader:pass,src:pass.uniforms[u],value:pass.uniforms[u].value}
+            }
+            for (let e in pass) {
+                if (pass[e] && (typeof pass[e]=='object') && pass[e].isShaderMaterial && pass[e].uniforms) {
+                    for (let i in pass[e].uniforms){
+                        console.log(pname+':'+e+':uniforms:value')
+                        //console.log(e,i)
+                        pun[i+'_'+pname]={pass,shader:pass[e],src:pass[e].uniforms[i],value:pass[e].uniforms[i].value}
+                    }
                 }
             }
-            for (var u in pun) {
-                if (!Object.prototype.hasOwnProperty.call(pun, u))
-                    //this doesnt do anything.?
-                    continue;
-                var un = pun[u];
+            let buildParamUi=(p)=>{
+                var un = p;
 
                 if (un.type === undefined) {
-                    if (un.value == undefined) {
+                    if (un.value === undefined) {
                         //console.log(`Undefined uniform value! s:${pname} u:${u} v:${un.value}`);
-                        continue;
+                        return;
                     }
 
-                    var numericField = (pass,uniform,field,value)=>{
+                    var numericField = (pass,uniform,field,value,src, shader)=>{
                         var arng = Math.abs(value) * 2;
                         if (arng < 10)
                             arng = 10;
-                        var b = doUniformBinding(pass, uniform, field, value);
+                        var b = doUniformBinding(pass, uniform, field, value, src, shader);
                         var fieldName = field ? uniform + "." + field : uniform;
                         return fld.add(b, 'value', -arng, arng, 0.001).name(fieldName).onChange(uniformChanged);
                     }
 
                     //console.log(`s:${pname} u:${un.value}`);
                     if (typeof un.value == "number") {
-                        numericField(pname, u, undefined, un.value);
+                        numericField(pname, u, undefined, un.value, p.src);
                     } else if (typeof un.value == "object") {
                         if (un.value instanceof THREE.Color) {
-                            var b = doUniformBinding(pname, u, 'value', un.value);
+                            var b = doUniformBinding(pname, u, 'value', un.value, p.src);
                             fld.addColor(b, 'value').name(u).onChange(uniformChanged);
                         } else if (un.value instanceof THREE.Vector3) {
-                            numericField(pname, u, 'x', un.value.x);
-                            numericField(pname, u, 'y', un.value.y);
-                            numericField(pname, u, 'z', un.value.z);
+                            numericField(pname, u, 'x', un.value.x, un);
+                            numericField(pname, u, 'y', un.value.y, un);
+                            numericField(pname, u, 'z', un.value.z, un);
                         } else if (un.value instanceof THREE.Vector2) {
-                            numericField(pname, u, 'x', un.value.x);
-                            numericField(pname, u, 'y', un.value.y);
+                            numericField(pname, u, 'x', un.value.x, un);
+                            numericField(pname, u, 'y', un.value.y, un);
                         } else
                             console.log("Unknown uniform type!:", un.value);
                     }
 
                 } else if (un.type == 'f') {
-                    numericField(pname, u, 'value', un.value);
+                    numericField(pname, u, 'value', un.value, un);
                     //fld.add(passes[pname].uniforms[u], 'value', -1, 1, 0.01).name(u).onChange(uniformChanged);
                 } else if (un.type == 't') {// Texture channel... ignore
                 } else if (un.type == 'c') {
@@ -262,6 +265,9 @@ engine.gui = new GUI();
                     fld.addColor(un, 'value').name(u).onChange(uniformChanged);
                 } else {// console.log("pass:",pname,u,un.type);
                 }
+            }
+            for (var u in pun) {
+                buildParamUi(pun[u])
             }
         }
     }
@@ -410,13 +416,18 @@ engine.gui = new GUI();
 
         if (ctx.composerNeedsUpdate)
             this.rebuildComposer();
-
+let saveEncoding = engine.renderer.outputEncoding;
+let saveExposure = engine.renderer.toneMappingExposure;
+engine.renderer.toneMappingExposure = .1
         composer.render(0.1);
+        
+engine.renderer.toneMappingExposure = saveExposure;
+engine.renderer.outputEncoding = saveEncoding;
         // stats.update();
     }
     .bind(this);
 
-    core.listen('glCreated', ()=>{
+    document.addEventListener('glCreated', ()=>{
         this.init();
         this.rebuildPasses();
         this.rebuildComposer();
