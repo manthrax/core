@@ -2,6 +2,7 @@ export default function PushCameraBehavior({THREE,camera,controls}){
     let {max,abs}=Math;
     let cx = new THREE.Vector3()
     let cy = new THREE.Vector3()
+    let ct = new THREE.Vector3()
     let mouseout=(e)=>{
         cx.set(0, 0, 0)
         cy.set(0, 0, 0)
@@ -13,6 +14,9 @@ export default function PushCameraBehavior({THREE,camera,controls}){
         let magy = max(0, abs(ny) - .4) * 5
         cx.set(0, 0, 0)
         cy.set(0, 0, 0)
+        let vdist = ct.copy(camera.position,controls.target).length()*.1;
+        magx *= vdist+.1;
+        magy *= vdist+.1;
         if (magx > 0) {
             cx.set(1, 0, 0).applyQuaternion(camera.quaternion)
             cx.multiplyScalar(nx > 0 ? magx : -magx)

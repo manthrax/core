@@ -1,7 +1,9 @@
 import {Vector3, Object3D} from "https://threejs.org/build/three.module.js";
+import {addToSet,removeFromSet} from "./AList.js"
 
 let gridSz;
 let rad;
+
 export default class World {
     set gridSize(v) {
         gridSz = v;
@@ -74,45 +76,29 @@ export default class World {
                 nbtab.push(nv3(x, 0, z))
         let neighbors = (sec)=>nbtab.map(e=>gsector(tv0.copy(sec.coordinate).add(e)))
 
-        let list_add = (obj,list,field)=>{
-            if (obj[field] !== undefined)
-                return
-            obj[field] = list.length
-            list.push(obj);
-        }
-        let list_remove = (obj,list,field)=>{
-            if (obj[field] === undefined)
-                return;
-            let top = list.pop()
-            if (obj[field] < list.length) {
-                top[field] = obj[field];
-                list[obj[field]] = top;
-            }
-            delete obj[field]
-        }
         this.topObject = 0;
         this.objects = {}
 
         this.addToSector = (obj,sec)=>{
             obj.sector = sec;
-            list_add(obj, sec.objects, 'objectIndex')
+            addToSet(obj, sec.objects, 'objectIndex')
             return obj
         }
         this.select = (obj,selected)=>{
             if(obj.type) debugger
-            let fn = selected ? list_add : list_remove
+            let fn = selected ? addToSet : removeFromSet
             fn(obj, this.selection, 'selectionIndex')
         }
         this.moveSector = (obj)=>{
 
             let sec = sectorAt(obj.position)
-            obj.sector && list_remove(obj, obj.sector.objects, 'objectIndex')
+            obj.sector && removeFromSet(obj, obj.sector.objects, 'objectIndex')
 
             this.addToSector(obj, sec)
 
             obj.view && sec.root.attach(obj.view)
             if (!visible[sec.key]) {
-                obj.dynamic && list_remove(obj, dynamics, 'dynamicIndex')
+                obj.dynamic && removeFromSet(obj, dynamics, 'dynamicIndex')
             }
         }
         this.add = (obj)=>{
@@ -178,9 +164,9 @@ export default class World {
             if (is) {
                 visible[sector.key] = sector;
                 sector.objects.map(obj=>(!obj.view) && spawnView(obj, this.spawn(sector, obj)))
-                sector.objects.forEach(obj=>(obj.dynamic) && list_add(obj, dynamics, 'dynamicIndex'))
+                sector.objects.forEach(obj=>(obj.dynamic) && addToSet(obj, dynamics, 'dynamicIndex'))
             } else {
-                sector.objects.forEach(obj=>(obj.dynamic) && list_remove(obj, dynamics, 'dynamicIndex'))
+                sector.objects.forEach(obj=>(obj.dynamic) && removeFromSet(obj, dynamics, 'dynamicIndex'))
                 delete visible[sector.key];
             }
         }

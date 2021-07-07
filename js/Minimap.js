@@ -15,7 +15,7 @@ export default function Minimap(app){
     let self;
     let bnds = new THREE.Box3()
     let orbitRadius=10;
-    document.addEventListener('object-clicked',e=>{
+    document.addEventListener('sim-object-clicked',e=>{
         self.target = e.detail.object.view;
     })
     document.addEventListener('after-render',e=>{

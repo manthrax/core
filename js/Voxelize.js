@@ -175,12 +175,13 @@ mvx.size(sz.x,sz.y,sz.z)
         )
 
 
-/*
+if(0){ //HULL COMPUTE SLOW
         let hull = this.processHull();
         hull.position.add(bmin);
         hull.scale.multiplyScalar(1. / rescale)
         c.parent.add(hull);
-*/
+}
+
 
         c.scale.multiplyScalar(1. / rescale)
         c.position.add(bmin)

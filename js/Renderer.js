@@ -13,9 +13,10 @@ import PushCameraBehavior from "./PushCameraBehavior.js"
 import CameraShake from "./CameraShake.js"
 import PostProcessing from "./PostProcessing.js"
 
+import StarTools from "./StarTools.js"
 
-let initializer=new Promise((resolve,reject)=>{
-let self;
+let initializer = new Promise((resolve,reject)=>{
+    let self;
 
     let camera, scene, renderer, controls;
     let clock;
@@ -29,14 +30,14 @@ let self;
 
     let {min, max, abs, PI, floor} = Math;
 
-const gltfLoader = new GLTFLoader()
-const dracoLoader = new DRACOLoader();
-dracoLoader.setDecoderPath( 'https://threejs.org/examples/js/libs/draco/' );
-gltfLoader.setDRACOLoader( dracoLoader );
+    const gltfLoader = new GLTFLoader()
+    const dracoLoader = new DRACOLoader();
+    dracoLoader.setDecoderPath('https://threejs.org/examples/js/libs/draco/');
+    gltfLoader.setDRACOLoader(dracoLoader);
 
     let core = {}
 
-    camera = new THREE.PerspectiveCamera(90,window.innerWidth / window.innerHeight,0.1,1000);
+    camera = new THREE.PerspectiveCamera(90,window.innerWidth / window.innerHeight,0.1,10000);
     camera.position.copy({
         x: -0.7965422346052364,
         y: 1.656460008711307,
@@ -84,9 +85,7 @@ gltfLoader.setDRACOLoader( dracoLoader );
     onWindowResize();
     window.addEventListener("resize", onWindowResize, false);
 
-
     controls.enabled = true;
-
 
     window.addEventListener("keyup", e=>(!e.ctrlKey) && (controls.enabled = true))
     window.addEventListener("keydown", e=>(e.ctrlKey) && (controls.enabled = false))
@@ -104,34 +103,34 @@ gltfLoader.setDRACOLoader( dracoLoader );
     new SkyEnv(core).then((se)=>{
         skyEnv = se;
 
-
-
-    self = {
-        THREE,
-        gltfLoader,
-        camera,
-        scene,
-        renderer,
-        controls,
-        clock,
-        skyEnv,
-        world,
-        info
-    }
+        self = {
+            THREE,
+            gltfLoader,
+            camera,
+            scene,
+            renderer,
+            controls,
+            clock,
+            skyEnv,
+            world,
+            info
+        }
 
         resolve(self)
+    }
+    )
+
+    let pushCameraBehavior = new PushCameraBehavior({
+        THREE,
+        scene,
+        camera,
+        controls
     })
 
-
-    let pushCameraBehavior = new PushCameraBehavior({THREE,scene,camera,controls})
-
-pushCameraBehavior.enabled = false;
-
+    pushCameraBehavior.enabled = true;
 
     world.defcmd('info', (p)=>info.message(p[1]))
     world.defcmd('chat', (p)=>info.chat(p[1]))
-
-
 
     let dlt = new THREE.Vector3()
     world.defcmd('tp', (p)=>{
@@ -143,6 +142,7 @@ pushCameraBehavior.enabled = false;
 
     }
     )
+
 
     let inChat
     let chatBuf = ''
@@ -190,7 +190,6 @@ pushCameraBehavior.enabled = false;
     })
     window.addEventListener("keyup", function(e) {})
 
-
     world.targetSectorChanged = (nsec)=>{
         skyEnv.targetChanged(nsec.position)
         info.display(`${nsec.coordinate.x},${nsec.coordinate.z}:${world.dynamics.length}`)
@@ -206,8 +205,23 @@ pushCameraBehavior.enabled = false;
 
     scene.add(camera);
 
+    let editor = new Editor({
+        THREE,
+        world,
+        scene,
+        camera
+    })
 
-    let editor = new Editor({THREE,world,scene,camera})
+
+
+let starTools = new StarTools(THREE,scene);
+
+
+
+//starTools.LoadScenario("assets/01_STNC_galaxy_700.txt", scene)
+
+starTools.LoadSavedGame("assets/gamestate", scene)
+
     function onWindowResize(event) {
         let width = window.innerWidth;
         let height = window.innerHeight;
@@ -217,7 +231,6 @@ pushCameraBehavior.enabled = false;
     }
 
     function animate() {
-        
 
         world && world.update(controls.target)
 
@@ -234,28 +247,33 @@ pushCameraBehavior.enabled = false;
     let beforeRenderEvent = new CustomEvent('before-render')
     let afterRenderEvent = new CustomEvent('after-render')
 
+    let cameraShake = new CameraShake({
+        THREE,
+        camera
+    }).enabled = false;
 
-    let cameraShake = new CameraShake({THREE,camera}).enabled = false;
-    
     let postProcessing = new PostProcessing({
         THREE,
         renderer,
         scene,
-        camera:{
-            current:camera
+        camera: {
+            current: camera
         }
     })
     document.dispatchEvent(new CustomEvent('glCreated'))
-    postProcessing.enabled=true;
+    postProcessing.enabled = true;
     postProcessing.cutToBlack();
     postProcessing.blurWorld(true)
 
-setTimeout(()=>{
-    postProcessing.cutToBlack(true)
-    postProcessing.blurWorld(false,()=>{
-        postProcessing.enabled=false;
-    },1000)
-},1000)
+    setTimeout(()=>{
+        postProcessing.cutToBlack(true)
+        postProcessing.blurWorld(false, ()=>{
+            postProcessing.enabled = false;
+        }
+        , 1000)
+    }
+    , 1000)
+
     function render() {
         let time = performance.now() / 1000;
         controls.update();
@@ -267,17 +285,18 @@ setTimeout(()=>{
 
         //skyEnv&&skyEnv.update()
 
-        document.dispatchEvent( beforeRenderEvent );
-        
-        if(postProcessing.enabled)
+        document.dispatchEvent(beforeRenderEvent);
+
+        if (postProcessing.enabled)
             postProcessing.render()
         else
             renderer.render(scene, camera);
-        
-        document.dispatchEvent( afterRenderEvent );
+
+        document.dispatchEvent(afterRenderEvent);
     }
     animate();
-})
+}
+)
 
 export default function Renderer() {
     return initializer;

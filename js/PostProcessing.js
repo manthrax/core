@@ -208,13 +208,13 @@ engine.gui = new GUI();
             let pun = {}
 
             for( let u in pass.uniforms){
-                console.log(pname+':uniforms:value')
+                //console.log(pname+':uniforms:value')
                 pun[u]={pass,shader:pass,src:pass.uniforms[u],value:pass.uniforms[u].value}
             }
             for (let e in pass) {
                 if (pass[e] && (typeof pass[e]=='object') && pass[e].isShaderMaterial && pass[e].uniforms) {
                     for (let i in pass[e].uniforms){
-                        console.log(pname+':'+e+':uniforms:value')
+                        //console.log(pname+':'+e+':uniforms:value')
                         //console.log(e,i)
                         pun[i+'_'+pname]={pass,shader:pass[e],src:pass[e].uniforms[i],value:pass[e].uniforms[i].value}
                     }
@@ -252,8 +252,8 @@ engine.gui = new GUI();
                         } else if (un.value instanceof THREE.Vector2) {
                             numericField(pname, u, 'x', un.value.x, un);
                             numericField(pname, u, 'y', un.value.y, un);
-                        } else
-                            console.log("Unknown uniform type!:", un.value);
+                        } //else
+                          //  console.log("Unknown uniform type!:", un.value);
                     }
 
                 } else if (un.type == 'f') {

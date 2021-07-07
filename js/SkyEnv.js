@@ -1,6 +1,9 @@
 //import*as THREE from "https://threejs.org/build/three.module.js";
 import {Sky} from 'https://threejs.org/examples/jsm/objects/Sky.js';
 
+import { FloatNode } from 'https://threejs.org/examples/jsm/nodes/inputs/FloatNode.js';
+import { MathNode } from 'https://threejs.org/examples/jsm/nodes/math/MathNode.js';
+
 let lights;
 import NebulaMaterial from './Nebula.js'
 
@@ -196,6 +199,15 @@ void main(){
         };
 
         const pmremGenerator = new THREE.PMREMGenerator(renderer);
+
+
+
+const transition = new FloatNode(0.1);
+document.addEventListener('before-render',()=>{
+	let time = performance.now()/1000.;
+	transition.value = time % 1;
+})
+
         self.update = (rseed)=>{
             console.log(rseed)
             const uniforms = sky.material.uniforms;
@@ -250,6 +262,11 @@ void main(){
                 renderToTarget(renderer, fsPlane, rttCamera, this.envTween)
                 scene.background = scene.environment = nextMap;
                 //this.envTween.texture
+
+
+                //scene.environment = new MathNode(lastMap, nextMap, transition, MathNode.MIX);
+
+
             } else {
                 scene.background = scene.environment = nextMap;
             }
@@ -258,6 +275,8 @@ void main(){
             // pmremGenerator.dispose();
 
             //     scene.environment = envMap;
+
+
         }
 
         self.update();
