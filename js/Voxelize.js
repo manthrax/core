@@ -13,7 +13,7 @@ function VX(THREE){
     let vol = 0;
     let addr;
     let p=[0,0,0]
-    vox.size=(x,y,z)=>(size=[x,y,z])&&(vol=x*y*z)&&(row=x)&&(slab=x*y)
+    vox.size=(x,y,z)=>(size=[x,y,z])&&(vol = vox.vol = x*y*z)&&(row=x)&&(slab=x*y)
     let valid=(x,y,z)=>(x>-1&&x<size[0])&&(y>-1&&y<size[1])&&(z>-1&&z<size[2]);
     vox.setxyz=(x,y,z,v)=>valid(x,y,z) && (addr=x+(y*row)+(z*slab))&&((v&&(map[addr]=v))||(delete map[addr]))
     vox.getxyz=(x,y,z,v)=>(valid(x,y,z) && ((addr=x+(y*row)+(z*slab))&&map[addr])) || undefined
@@ -25,6 +25,8 @@ function VX(THREE){
         let keys = Object.keys(map).map(e=>+e);
         keys.forEach(k=>k2ap(k,p)&&fn(p[0],p[1],p[2],map[k]))
     }
+
+
     return vox;
 }
 
@@ -45,7 +47,7 @@ export default class Vox {
         this.voxMap = {};
         nv3 = (x,y,z)=>new THREE.Vector3(x,y,z)
     }
-    voxelize(root, maxRow=256) {
+    voxelize(root, maxRow=128) {
         let { voxMap, size, THREE} = this;
         let c = root.clone(true);
         root.parent.add(c);
@@ -180,8 +182,8 @@ if(0){ //HULL COMPUTE SLOW
         hull.position.add(bmin);
         hull.scale.multiplyScalar(1. / rescale)
         c.parent.add(hull);
-}
 
+}
 
         c.scale.multiplyScalar(1. / rescale)
         c.position.add(bmin)
@@ -204,7 +206,7 @@ let n6=[[-1,0,0],[0,-1,0],[0,0,-1],[1,0,0],[0,1,0],[0,0,1]]
 let n26 = []
 for(let x=-1;x<=1;x++)
 for(let y=-1;y<=1;y++)
-for(let z=-1;z<=1;z++)(x||y||z) && n26.push([x,y,z]);
+for(let z=-1;z<=1;z++)(x||y||z) && n26.push([x,y,z]);//lookup table for neighbors
 
 
         let neighbors6 = (p,nopen=[])=>{

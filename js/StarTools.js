@@ -4,9 +4,9 @@ import { LineGeometry } from 'https://threejs.org/examples/jsm/lines/LineGeometr
 
 
 let mat0,mat1;
-let boxGeom,sphereGeom;
+let boxGeom,sphereGeom,planeGeom;
 
-export default function StarTools(THREE,scene){
+export default function StarTools(THREE){
 
 function LoadGame(//fn="assets/gtest.txt") {
     fn="assets/01_STNC_galaxy_700.txt"){
@@ -99,6 +99,7 @@ let mat0 = new THREE.MeshStandardMaterial({
 })
 let mat1 = mat0.clone()
 //mat1.blending = THREE.AdditiveBlending
+let planeGeom = new THREE.PlaneBufferGeometry(.5,.5)
 let sphereGeom = new THREE.SphereBufferGeometry(.5,16,8)
 let boxGeom =  new THREE.BoxBufferGeometry(1,1,1)
 
@@ -108,15 +109,16 @@ let tobj = new THREE.Object3D();
 let tbox = new THREE.Mesh(sphereGeom,mat1.clone())
 tbox.material.blending = THREE.AdditiveBlending
 tbox.material.side = THREE.BackSide
-scene.add(tbox)
+//scene.add(tbox)
 
 let nv3 = (x,y,z)=>new THREE.Vector3(x,y,z)
 
 let zmargin = nv3(.4,.4,.4)
+
 document.addEventListener('object-clicked',(e)=>{
     let hit = e.detail.object;
 
-    if(hit.instanceId!==undefined){
+    if((hit.instanceId!==undefined) && (hit.object.name=='starmap')){
         hit.object.getMatrixAt(hit.instanceId,tobj.matrix);
         tobj.matrix.decompose(tbox.position,tbox.quaternion,tbox.scale)
         tbox.scale.add(zmargin)
@@ -126,14 +128,20 @@ document.addEventListener('object-clicked',(e)=>{
     }
 })
 
-function buildVis(scene,voxPoints,voxSz,voxClr){
+let t0=nv3()
 
-    const mesh = new THREE.InstancedMesh(sphereGeom,mat0,voxPoints.length);
+
+function buildVis(scene,voxPoints,voxSz,voxClr){
+let mclone = mat0;
+mclone.onBeforeCompile=(shader,renderer)=>{
+    console.log(shader.fragmentShader)
+}
+    const mesh = new THREE.InstancedMesh(planeGeom,mclone,voxPoints.length);
     const matrix = new THREE.Matrix4();
     let c4 = new THREE.Color()
     voxPoints.forEach((v,i)=>{
         let sz = voxSz[i];
-        sz.multiplyScalar(.5);
+        sz.multiplyScalar(2.5);
         matrix.elements = [sz.x, 0, 0, 0, 0, sz.y, 0, 0, 0, 0, sz.z, 0, v.x, v.y, v.z, 1]
         mesh.setMatrixAt(i, matrix);
         mesh.setColorAt(i, c4.set((Math.random()*0x1000000)|0))
@@ -142,8 +150,9 @@ function buildVis(scene,voxPoints,voxSz,voxClr){
     mesh.instanceColor && (mesh.instanceColor.needsUpdate = true)
     scene.add(mesh)
 
-    mesh.scale.multiplyScalar(100)
-    
+    //mesh.scale.multiplyScalar(1)
+    mesh.position.y -= 2;
+    mesh.name = 'starmap'
     return mesh;
 }
 
@@ -170,16 +179,17 @@ function LoadSavedGame(fn,scene){
                     e.hyperlane.null.forEach(lane=>{
                         let he = arr[lane.to];
                         let c1 = nv3(he.coordinate.x,0,he.coordinate.y)
-                        hLines.push(c,c1);                
+                        hLines.push(c.clone(),c1);                
                     })
                 else{
                     let he = arr[e.hyperlane.null.to];
                     let c1 = nv3(he.coordinate.x,0,he.coordinate.y)
-                    hLines.push(c,c1);
+                    hLines.push(c.clone(),c1);
                 }
             }
         })
-        
+        //voxPoints.forEach(v=>v.multiplyScalar(10))
+        //hLines.forEach(v=>v.multiplyScalar(10))
         let m = buildVis(scene,voxPoints,voxSz);
         //m.geometry = new THREE.BoxBufferGeometry(1,1,1);
         //m.position.y += 50;

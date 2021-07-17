@@ -12,8 +12,9 @@ import Editor from "./Editor.js"
 import PushCameraBehavior from "./PushCameraBehavior.js"
 import CameraShake from "./CameraShake.js"
 import PostProcessing from "./PostProcessing.js"
+import PostUI from "./PostUI.js"
+import PostFX from "./PostFX.js"
 
-import StarTools from "./StarTools.js"
 
 let initializer = new Promise((resolve,reject)=>{
     let self;
@@ -77,8 +78,8 @@ let initializer = new Promise((resolve,reject)=>{
 
     controls.minDistance = 1.5;
     controls.maxDistance = 14.5;
-    controls.minPolarAngle = PI * .1;
-    controls.maxPolarAngle = PI * .48;
+    controls.minPolarAngle = PI * .01;
+    controls.maxPolarAngle = PI * .49;
 
     clock = new THREE.Clock();
 
@@ -127,8 +128,9 @@ let initializer = new Promise((resolve,reject)=>{
         controls
     })
 
-    pushCameraBehavior.enabled = true;
+    pushCameraBehavior.enabled = false;
 
+    world.defcmd('spin', (p)=>controls.autoRotate = !controls.autoRotate)
     world.defcmd('info', (p)=>info.message(p[1]))
     world.defcmd('chat', (p)=>info.chat(p[1]))
 
@@ -155,6 +157,9 @@ let initializer = new Promise((resolve,reject)=>{
     // [\]' (in order)
 
     window.addEventListener("keydown", function(e) {
+        if (e.code == 'Tab') {
+            world.docmd('starmap')
+        }else
         if (e.code == 'Enter') {
             if (inChat) {
                 if (chatBuf.length) {
@@ -208,19 +213,12 @@ let initializer = new Promise((resolve,reject)=>{
     let editor = new Editor({
         THREE,
         world,
+        renderer,
         scene,
+        controls,
         camera
     })
 
-
-
-let starTools = new StarTools(THREE,scene);
-
-
-
-//starTools.LoadScenario("assets/01_STNC_galaxy_700.txt", scene)
-
-starTools.LoadSavedGame("assets/gamestate", scene)
 
     function onWindowResize(event) {
         let width = window.innerWidth;
@@ -260,15 +258,21 @@ starTools.LoadSavedGame("assets/gamestate", scene)
             current: camera
         }
     })
+
+    let postUI = new PostUI(THREE,postProcessing);
+    let postFX = new PostFX(THREE,postProcessing);
+    
     document.dispatchEvent(new CustomEvent('glCreated'))
     postProcessing.enabled = true;
     postProcessing.cutToBlack();
     postProcessing.blurWorld(true)
-
+postProcessing.setPassActivation('unrealBloom',true)
     setTimeout(()=>{
         postProcessing.cutToBlack(true)
         postProcessing.blurWorld(false, ()=>{
-            postProcessing.enabled = false;
+            postProcessing.setPassActivation('unrealBloom',true)
+            //postProcessing.setPass
+            postProcessing.enabled = false;//false;
         }
         , 1000)
     }
@@ -294,6 +298,7 @@ starTools.LoadSavedGame("assets/gamestate", scene)
 
         document.dispatchEvent(afterRenderEvent);
     }
+    
     animate();
 }
 )
@@ -301,3 +306,6 @@ starTools.LoadSavedGame("assets/gamestate", scene)
 export default function Renderer() {
     return initializer;
 }
+
+
+

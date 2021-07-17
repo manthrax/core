@@ -1,7 +1,8 @@
 import GridMat from "./GridMat.js"
 import OutlineMaterial from "./OutlineMaterial.js"
+import {TransformControls} from "https://threejs.org/examples/jsm/controls/TransformControls.js";
 
-export default function Editor({THREE, world, scene, camera}) {
+export default function Editor({THREE, world, renderer, scene, camera, controls}) {
     let {floor} = Math;
     let buttons;
 
@@ -15,6 +16,10 @@ export default function Editor({THREE, world, scene, camera}) {
     let gridMat = new GridMat({
         THREE
     });
+
+    let transformWidget = new TransformControls(camera,renderer.domElement);
+
+    //scene.add(transformWidget);
 
     let dragPlane = new THREE.Mesh(new THREE.PlaneBufferGeometry(world.gridSize * 20,world.gridSize * 20,2,2),gridMat)
 
@@ -57,6 +62,12 @@ export default function Editor({THREE, world, scene, camera}) {
             world.select(o, false)
         } else {
             world.select(o, true)
+
+            o.view && transformWidget.position.copy(o.view.position) //&& transformWidget.attach(o.view)
+
+
+	        //control.attach( mesh );
+            //o.view && (transformWidget.object = o.view);
         }
     }
 
@@ -141,10 +152,15 @@ export default function Editor({THREE, world, scene, camera}) {
             dragProxy.parent.remove(dragProxy)
             dragProxy = undefined
             buttons = e.buttons
+            
+            controls.enabled = true;
         }
     }
 
     function mousedown(e) {
+        if(e.target!==renderer.domElement){
+            return;
+        }
         buttons = e.buttons
         let intersects = raycast(e, scene.children)
         if (!e.shiftKey)
@@ -152,7 +168,7 @@ export default function Editor({THREE, world, scene, camera}) {
                 select(world.selection[0], false)
         for (let i = 0; i < intersects.length; i++) {
             let o = intersects[i].object
-            while ((o != scene) && (o.userData.objectId == undefined))
+            while ((o.parent != scene) && (o.userData.objectId == undefined))
                 o = o.parent;
             let dob = world.objects[o.userData.objectId];
             (dob) && document.dispatchEvent(new CustomEvent('sim-object-clicked',{
@@ -188,6 +204,8 @@ export default function Editor({THREE, world, scene, camera}) {
             o.parent.add(dragProxy)
 
             dragPlane.attach(dragProxy)
+
+//controls.enabled = false;
 
             break;
             //Only process first hit

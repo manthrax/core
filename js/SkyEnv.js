@@ -45,7 +45,12 @@ export default function SkyEnv(ctx) {
         }
 
         let fsPlane = new THREE.Mesh(new THREE.PlaneBufferGeometry(),new THREE.ShaderMaterial({
-            side: THREE.DoubleSide
+            side: THREE.DoubleSide,
+            fragmentShader:`
+void main(){
+	gl_FragColor = vec4(1.);
+}
+`
         }));
 
         let lights = new THREE.Object3D();
@@ -200,8 +205,6 @@ void main(){
 
         const pmremGenerator = new THREE.PMREMGenerator(renderer);
 
-
-
 const transition = new FloatNode(0.1);
 document.addEventListener('before-render',()=>{
 	let time = performance.now()/1000.;
@@ -237,6 +240,8 @@ document.addEventListener('before-render',()=>{
             self.nightScene && self.nightScene.material.randomize && self.nightScene.material.randomize(rseed || (((Math.random() * 1000.) | 0)));
 
             let lastMap = scene.environment
+            
+                scene.background = scene.environment = null;
             let nextMap = pmremGenerator.fromScene(self.nightScene || sky).texture;
 
             if (lastMap && nextMap) {
@@ -258,10 +263,18 @@ document.addEventListener('before-render',()=>{
                     })
 
                 }
-                scene.background = scene.environment = null;
+
+
+fsPlane.material.map = lastMap;
+
                 renderToTarget(renderer, fsPlane, rttCamera, this.envTween)
+
                 scene.background = scene.environment = nextMap;
-                //this.envTween.texture
+                
+//scene.background = scene.environment = this.envTween.texture;
+                
+//nextMap = this.envTween.texture;
+                //
 
 
                 //scene.environment = new MathNode(lastMap, nextMap, transition, MathNode.MIX);
@@ -301,6 +314,12 @@ document.addEventListener('before-render',()=>{
         let triggerUpdate=(newSeed)=>{
 			document.dispatchEvent(new CustomEvent('generate-nebula',{detail:{seed:newSeed}}))
         }
+        document.addEventListener('define-commands', (e)=>{
+        	e.detail.commands.neb=(e)=>{
+        		if(e[1]==undefined)world.docmd('info', '' + NebulaMaterial.genSeed);
+        		else triggerUpdate(parseFloat(e[1]||0))
+        	}
+        });
         document.addEventListener('keydown', (e)=>{
             if (e.code == 'BracketLeft') {
                 effectController.elevation += 1;

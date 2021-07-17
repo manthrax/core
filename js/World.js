@@ -208,6 +208,12 @@ export default class World {
         this.commands = {}
         this.docmd = (...args)=>this.commands[args[0]] && this.commands[args[0]](args)
         this.defcmd = (name,fn)=>this.commands[name] = fn
+        this.buildCommands=()=>{
+            let commands = {}
+            let cmds = new CustomEvent('define-commands',{detail:{commands}});
+            document.dispatchEvent(cmds);
+            for(let k in commands) this.defcmd(k,commands[k]);
+        }
 
         //    world.defcmd('list', (p)=>)
     }

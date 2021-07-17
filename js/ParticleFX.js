@@ -322,3 +322,13 @@ ParticleFX.getPoint = function(vec) {
     vec.z = r * cosPhi;
     return vec;
 }
+
+
+
+
+
+
+
+/*
+Ribbons
+
