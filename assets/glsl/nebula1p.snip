@@ -1,0 +1,8 @@
+
+void main() {
+    vec3 posn = vPos * uScale;//normalize(pos) * uScale;
+    float c = min(1.0, nebula(posn + uOffset) * uIntensity);
+    c = pow(abs(c), uFalloff);
+    gl_FragColor = vec4(uColor*c, 1.0);
+    //gl_FragColor = vec4(1.0,0,0,1.0);//uColor, c);
+}

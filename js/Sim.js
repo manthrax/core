@@ -1,22 +1,22 @@
-
-
-import InstanceGroup from "./InstanceGroup.js"
+import {InstanceGroup} from "./rendering/InstanceGroup.js"
 
 export default class Sim {
     constructor(THREE, prefabs, world) {
 
+        world.defcmd('list', (p)=>{
+            localforage.keys().then(k=>{
 
-world.defcmd('list', (p)=>{
-    localforage.keys().then(k=>{
+                world.docmd('info', k.join(','))
+            }
+            )
+        }
+        )
 
-        world.docmd('info',k.join(','))
-    })
-})
-
-world.defcmd('help', (p)=>{
- let k = Object.keys(world.commands)
- world.docmd('info',k.join(','))
-})
+        world.defcmd('help', (p)=>{
+            let k = Object.keys(world.commands)
+            world.docmd('info', k.join(','))
+        }
+        )
         let {abs, sin, cos, PI, random} = Math
         let nv3 = THREE.Vector3
 
@@ -42,64 +42,68 @@ world.defcmd('help', (p)=>{
         world.beginFrame = ()=>{
             now = performance.now() / 1000.
         }
-        
+
         let mvec = new nv3()
-        
-        let bounce = function(){
+
+        let bounce = function() {
             this.view.position.y = abs(sin((now + this.dynamicIndex) * 10.)) * .05
             this.view.rotation.y += .003;
             this.rotation && this.rotation.copy(this.view.rotation)
             this.position && (this.view.position.y += this.position.y)
-            
+
         }
 
-        let move = function(amt=.1){
-          //  amt = 0;
-          
-            mvec.set(0,0,-1).applyQuaternion(this.view.quaternion).multiplyScalar(amt)
-            world.move(this,mvec)
+        let move = function(amt=.1) {
+            //  amt = 0;
+
+            mvec.set(0, 0, -1).applyQuaternion(this.view.quaternion).multiplyScalar(amt)
+            world.move(this, mvec)
         }
         let vehUpdate = function() {
             bounce.call(this)
-            move.call(this,.1)
+            move.call(this, .1)
         }
 
         let chrUpdate = function() {
             bounce.call(this)
-            move.call(this,-.01)
+            move.call(this, -.01)
         }
 
         categories.chr.forEach(e=>(e.dynamic = true) && (e.update = chrUpdate))
         categories.veh.forEach(e=>(e.dynamic = true) && (e.update = vehUpdate))
 
         let tileObj = 'vox/scene_grass'
-prefabs[tileObj].flags = 1;
+        prefabs[tileObj].flags = 1;
 
-let computeStaticBounds= (inst)=>{
-    (!inst.userData.worldBounds) && (inst.userData.worldBounds=new THREE.Box3())
-    inst.userData.worldBounds.setFromObject(inst)
+        let computeStaticBounds = (inst)=>{
+            (!inst.userData.worldBounds) && (inst.userData.worldBounds = new THREE.Box3())
+            inst.userData.worldBounds.setFromObject(inst)
 
-    if(!world.dbgVis){
-        world.dbgVis = new InstanceGroup()
-        world.scene.add(world.dbgVis);
-        world.dbgVisMesh = new THREE.Mesh(new THREE.BoxGeometry(),new THREE.MeshBasicMaterial({color:'yellow',transparent:true,opacity:.5}))
-        world.dbgBox=(bx)=>{
-            let m = world.dbgVisMesh.clone()
-            bx.getCenter(m.position)
-            bx.getSize(m.scale)
-            m.scale.multiplyScalar(1.01)
-            world.dbgVis.add(m)
+            if (!world.dbgVis) {
+                world.dbgVis = new InstanceGroup()
+                world.scene.add(world.dbgVis);
+                world.dbgVisMesh = new THREE.Mesh(new THREE.BoxGeometry(),new THREE.MeshBasicMaterial({
+                    color: 'yellow',
+                    transparent: true,
+                    opacity: .5
+                }))
+                world.dbgBox = (bx)=>{
+                    let m = world.dbgVisMesh.clone()
+                    bx.getCenter(m.position)
+                    bx.getSize(m.scale)
+                    m.scale.multiplyScalar(1.01)
+                    world.dbgVis.add(m)
+                }
+            }
+            world.dbgBox(inst.userData.worldBounds)
         }
-    }
-    world.dbgBox(inst.userData.worldBounds)
-}
         world.spawn = (mk,obj)=>{
             let pf = prefabs[obj.src]
             let inst = pf.object.clone()
 
             pf.dynamic && (obj.dynamic = true)
             pf.update && (obj.update = pf.update)
-      //      (!pf.dynamic) && computeStaticBounds(inst)
+            //      (!pf.dynamic) && computeStaticBounds(inst)
 
             return inst;
         }
@@ -114,7 +118,7 @@ let computeStaticBounds= (inst)=>{
                 src: tileObj,
                 position: pos,
                 rotation: rot,
-                flags: pf.flags||0,
+                flags: pf.flags || 0,
                 update: pf.update
             }
             world.addToSector(obj, mk)
@@ -122,24 +126,22 @@ let computeStaticBounds= (inst)=>{
         }
         let arrayRand = e=>e[(Math.random() * e.length) | 0]
 
+        let defaultSector = (mk)=>{
 
-let defaultSector=(mk)=>{
-
-    let obj = spawnInSector(mk, tileObj)
-        //obj.locked = true;
-    for (let i = 0; i < 5; i++) {
-        let s = spawnInSector(mk, arrayRand(random()>.2?categories.chr:random()>.5?categories.veh:categories.obj).name)
-        s.position.x += Math.random() * world.gridSize
-        s.position.z += Math.random() * world.gridSize
-            s.rotation.y = ((Math.random() * 4) | 0) * (Math.PI * .5)
-    }
-}
-
+            let obj = spawnInSector(mk, tileObj)
+            //obj.locked = true;
+            for (let i = 0; i < 5; i++) {
+                let s = spawnInSector(mk, arrayRand(random() > .2 ? categories.chr : random() > .5 ? categories.veh : categories.obj).name)
+                s.position.x += Math.random() * world.gridSize
+                s.position.z += Math.random() * world.gridSize
+                s.rotation.y = ((Math.random() * 4) | 0) * (Math.PI * .5)
+            }
+        }
 
         world.sectorGenerator = (mk)=>{
 
-             defaultSector(mk)
-             /*
+            defaultSector(mk)
+            /*
 return localforage.getItem( ''+mk.key ).then(item=>{
         if(item==null)
              defaultSector(mk)

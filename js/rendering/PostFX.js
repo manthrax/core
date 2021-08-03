@@ -1,4 +1,4 @@
-import Easing from "./Easing.js"
+import Easing from "../Easing.js"
 
 export default function PostFX(THREE,postProcessing){
     let ctx=postProcessing

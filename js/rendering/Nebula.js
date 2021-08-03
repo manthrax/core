@@ -1,6 +1,6 @@
 import*as THREE from "https://threejs.org/build/three.module.js";
 import Shaders from './Shaders.js';
-import PRNG from './PRNG.js';
+import PRNG from '../PRNG.js';
 //let nebula = new Nebula()
 
 export default class NebulaMaterial {
@@ -9,7 +9,7 @@ export default class NebulaMaterial {
         //this.energyImpactMaterial = await this.nebula(false,"energyImpact.snip",{impactPoint:new THREE.Vector3(),impactRadius:3.0});
 
         return new Promise((resolve,reject)=>{
-            Shaders.load("assets/glsl/nebula.glsl", {
+            Shaders.load("../../core/assets/glsl/nebula.glsl", {
             nebulaFn: nebulaFn ? nebulaFn : "nebula1p.snip"
             }).then((skel)=>{
 			

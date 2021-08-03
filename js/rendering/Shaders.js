@@ -1,4 +1,4 @@
-import Util from './Util.js'
+import Util from '../Util.js'
 export default class Shaders {
     static getFile(url) {
         return new Promise((resolve,reject)=>{
@@ -34,7 +34,7 @@ export default class Shaders {
                 var snip = incmap[fs[i]]
                 if (!snip)
                     snip = fs[i] + ".snip";
-                fs[i] = await Shaders.getFile("assets/glsl/"+snip);
+                fs[i] = await Shaders.getFile("../../core/assets/glsl/"+snip);
                 i += 2;
             }
         }

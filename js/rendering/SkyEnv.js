@@ -211,8 +211,8 @@ document.addEventListener('before-render',()=>{
 	transition.value = time % 1;
 })
 
-        self.update = (rseed)=>{
-            console.log(rseed)
+        self.update = (rseed=12345.)=>{
+            console.log(`skyseed:${rseed}`)
             const uniforms = sky.material.uniforms;
             uniforms['turbidity'].value = effectController.turbidity;
             uniforms['rayleigh'].value = effectController.rayleigh;

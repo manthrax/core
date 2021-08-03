@@ -4,17 +4,18 @@ import {GLTFLoader} from "https://threejs.org/examples/jsm/loaders/GLTFLoader.js
 import {DRACOLoader} from "https://threejs.org/examples/jsm/loaders/DRACOLoader.js";
 import {RGBELoader} from "https://threejs.org/examples/jsm/loaders/RGBELoader.js";
 import SkyEnv from "./SkyEnv.js"
-import World from "./World.js"
-import ProcGen from "./ProcGen.js"
+import World from "../World.js"
+import ProcGen from "../ProcGen.js"
 //import*as Renderer from "./Renderer.js"
-import Info from "./Info.js"
-import Editor from "./Editor.js"
+import Info from "../Info.js"
+import Editor from "../Editor.js"
 import PushCameraBehavior from "./PushCameraBehavior.js"
 import CameraShake from "./CameraShake.js"
 import PostProcessing from "./PostProcessing.js"
 import PostUI from "./PostUI.js"
 import PostFX from "./PostFX.js"
 
+let cfg={}
 
 let initializer = new Promise((resolve,reject)=>{
     let self;
@@ -93,15 +94,23 @@ let initializer = new Promise((resolve,reject)=>{
 
     world = new World(scene)
 
+
+
     core = {
-        renderer,
-        scene,
-        world,
         THREE,
+        scene,
+        renderer,
+        world,
         RGBELoader,
+        camera,
+        controls,
     }
 
-    new SkyEnv(core).then((se)=>{
+    let pushCameraBehavior = new PushCameraBehavior(core)
+
+
+
+    let rslv=(se)=>{
         skyEnv = se;
 
         self = {
@@ -114,19 +123,16 @@ let initializer = new Promise((resolve,reject)=>{
             clock,
             skyEnv,
             world,
-            info
+            info,
+            pushCameraBehavior
         }
 
         resolve(self)
     }
-    )
+    if(cfg.sky!=='false'){ new SkyEnv(core).then(
+        rslv
+    )}else rslv()
 
-    let pushCameraBehavior = new PushCameraBehavior({
-        THREE,
-        scene,
-        camera,
-        controls
-    })
 
     pushCameraBehavior.enabled = false;
 
@@ -274,9 +280,9 @@ postProcessing.setPassActivation('unrealBloom',true)
             //postProcessing.setPass
             postProcessing.enabled = false;//false;
         }
-        , 1000)
+        , 250)
     }
-    , 1000)
+    , 250)
 
     function render() {
         let time = performance.now() / 1000;
@@ -303,7 +309,8 @@ postProcessing.setPassActivation('unrealBloom',true)
 }
 )
 
-export default function Renderer() {
+export default function Renderer(_cfg) {
+    cfg=_cfg;
     return initializer;
 }
 

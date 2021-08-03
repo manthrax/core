@@ -1,5 +1,5 @@
-import GridMat from "./GridMat.js"
-import OutlineMaterial from "./OutlineMaterial.js"
+import GridMat from "./rendering/GridMat.js"
+import OutlineMaterial from "./rendering/OutlineMaterial.js"
 import {TransformControls} from "https://threejs.org/examples/jsm/controls/TransformControls.js";
 
 export default function Editor({THREE, world, renderer, scene, camera, controls}) {
