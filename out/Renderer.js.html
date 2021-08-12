@@ -1,26 +1,53 @@
-import*as THREE from "https://threejs.org/build/three.module.js";
-//import {OrbitControls} from "https://threejs.org/examples/jsm/controls/OrbitControls.js";
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: Renderer.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: Renderer.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>import*as THREE from "https://threejs.org/build/three.module.js";
+import {OrbitControls} from "https://threejs.org/examples/jsm/controls/OrbitControls.js";
 import {GLTFLoader} from "https://threejs.org/examples/jsm/loaders/GLTFLoader.js";
 import {DRACOLoader} from "https://threejs.org/examples/jsm/loaders/DRACOLoader.js";
 import {RGBELoader} from "https://threejs.org/examples/jsm/loaders/RGBELoader.js";
-import SkyEnv from "./components/SkyEnv.js"
+import SkyEnv from "./SkyEnv.js"
 import World from "../World.js"
-import ProcGen from "../math/ProcGen.js"
-
+import ProcGen from "../ProcGen.js"
+//import*as Renderer from "./Renderer.js"
 import Info from "../Info.js"
 import Editor from "../Editor.js"
 import PostProcessing from "./PostProcessing.js"
 import PostUI from "./PostUI.js"
 import PostFX from "./PostFX.js"
-import {CameraControls} from "./camera/CameraControls.js"
-import AudioManager from "./AudioManager.js"
+import {CameraControls} from "./CameraControls.js"
 
 let cfg={}
 
 let initializer = new Promise((resolve,reject)=>{
     let self;
 
-    let  scene, renderer, controls;//camera,
+    let camera, scene, renderer, controls;
     let clock;
 
     let skyEnv;
@@ -82,16 +109,11 @@ let initializer = new Promise((resolve,reject)=>{
     camera.position.set(10, 10, 10);
 */
 
-    let cameraControls = new CameraControls({scene,renderer})
+    let cameraControls = new CameraControls({camera,scene,renderer})
 
-    //camera = cameraControls.multiCamera.camera;
+    camera = cameraControls.multiCamera.camera;
     
     controls = cameraControls.orbitControls;
-
-
-    let audioManager = new AudioManager( THREE )
-
-
 
     clock = new THREE.Clock();
 
@@ -101,13 +123,15 @@ let initializer = new Promise((resolve,reject)=>{
 
     world = new World(scene)
 
+
+
     core = {
         THREE,
         scene,
         renderer,
         world,
         RGBELoader,
-        //camera,
+        camera,
         controls,
     }
 
@@ -120,8 +144,7 @@ let initializer = new Promise((resolve,reject)=>{
         self = {
             THREE,
             gltfLoader,
-            //camera,
-            cameraControls,
+            camera,
             scene,
             renderer,
             controls,
@@ -129,7 +152,7 @@ let initializer = new Promise((resolve,reject)=>{
             skyEnv,
             world,
             info,
-            pushCameraBehavior,
+            pushCameraBehavior
         }
 
         resolve(self)
@@ -152,7 +175,7 @@ let initializer = new Promise((resolve,reject)=>{
         info.chat(dlt.x, dlt.z)
         dlt.sub(controls.target)
         controls.target.add(dlt)
-        cameraControls.camera.position.add(dlt)
+        camera.position.add(dlt)
 
     }
     )
@@ -160,12 +183,12 @@ let initializer = new Promise((resolve,reject)=>{
 
     let inChat
     let chatBuf = ''
-    let kvalid = (keycode)=>(keycode > 47 && keycode < 58) || // number keys
-    keycode == 32 || keycode == 13 || // spacebar & return key(s) (if you want to allow carriage returns)
-    (keycode > 64 && keycode < 91) || // letter keys
-    (keycode > 95 && keycode < 112) || // numpad keys
-    (keycode > 185 && keycode < 193) || // ;=,-./` (in order)
-    (keycode > 218 && keycode < 223);
+    let kvalid = (keycode)=>(keycode > 47 &amp;&amp; keycode &lt; 58) || // number keys
+    keycode == 32 || keycode == 13 || // spacebar &amp; return key(s) (if you want to allow carriage returns)
+    (keycode > 64 &amp;&amp; keycode &lt; 91) || // letter keys
+    (keycode > 95 &amp;&amp; keycode &lt; 112) || // numpad keys
+    (keycode > 185 &amp;&amp; keycode &lt; 193) || // ;=,-./` (in order)
+    (keycode > 218 &amp;&amp; keycode &lt; 223);
     // [\]' (in order)
 
     window.addEventListener("keydown", function(e) {
@@ -225,7 +248,7 @@ let sectorEnteredEvent = new Event('sector_entered',{detail:0})
         }
     }))
 
-    //scene.add(camera);
+    scene.add(camera);
 
     let editor = new Editor({
         THREE,
@@ -233,34 +256,33 @@ let sectorEnteredEvent = new Event('sector_entered',{detail:0})
         renderer,
         scene,
         controls,
-        cameraControls,
-        //camera
+        camera
     })
 
 
     function onWindowResize(event) {
         let width = window.innerWidth;
         let height = window.innerHeight;
-        cameraControls.multiCamera.setSize(width,height)
+        camera.aspect = width / height;
+        if(camera.isOrthographicCamera){
+            camera.left=-width;
+            camera.right=width;
+            camera.bottom=-height;
+            camera.top=height;
+        }
+        camera.updateProjectionMatrix();
         renderer.setSize(width, height);
     }
 
-audioManager.load('./assets/blerzat.mp3', 'intro')
-
-audioManager.play('intro')
-
     function animate() {
 
-        requestAnimationFrame(animate);
-        
-        world && world.update(controls.target)
+        world &amp;&amp; world.update(controls.target)
 
-        skyChanged && skyChanged();
+        requestAnimationFrame(animate);
+        skyChanged &amp;&amp; skyChanged();
 
         editor.update()
-        
-        audioManager.update(cameraControls.camera)
-        
+
         render();
     }
 
@@ -273,7 +295,7 @@ audioManager.play('intro')
         renderer,
         scene,
         camera: {
-            current: cameraControls.multiCamera.camera
+            current: camera
         }
     })
 
@@ -296,25 +318,21 @@ postProcessing.setPassActivation('unrealBloom',true)
     }
     , 250)
 
-world.defcmd('cameraType',(p)=>{
-    console.log(p[1])
-    cameraControls.cameraType = p[1];
-    //camera = cameraControls.getCamera();
-})
     function render() {
         let time = performance.now() / 1000;
         cameraControls.update();
 
         info.update(time)
 
-        //skyEnv&&skyEnv.update()
+        //skyEnv&amp;&amp;skyEnv.update()
 
         document.dispatchEvent(beforeRenderEvent);
 
         if (postProcessing.enabled)
             postProcessing.render()
         else
-            renderer.render(scene, cameraControls.camera);
+            renderer.render(scene, camera);
+
         document.dispatchEvent(afterRenderEvent);
     }
     
@@ -333,3 +351,26 @@ function Renderer(_cfg) {
 
 
 export default Renderer;
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="Renderer.html">Renderer</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.7</a> on Thu Aug 05 2021 15:31:48 GMT-0700 (Pacific Daylight Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

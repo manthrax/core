@@ -107,6 +107,47 @@ export default class World {
             let sec = sectorAt(obj.position)
             this.addToSector(obj, sec)
         }
+        
+        let cmin=nv3()
+        let cmax=nv3()
+        let cstep=nv3()
+        let rslt=[]
+
+        let collisions=[];
+
+        this.getCollisions = (obj,rad=1)=>{
+            let op = obj.position;
+            rslt.length=collisions.length = 0;
+            let rad2=rad*2;
+            cmin.set(-rad,0,-rad).add(op);
+            cmax.set( rad,0, rad).add(op);
+            let sec0 = sectorAt(cmin)
+            cstep.set(cmax.x,0,cmin.z)
+            let sec1 = sectorAt(cstep)
+            cstep.set(cmin.x,0,cmax.z)
+            let sec2 = sectorAt(cstep)
+            cstep.set(cmax.x,0,cmax.z)
+            let sec3 = sectorAt(cstep)
+            rslt.push(sec0);
+            (sec1!==sec0)&&rslt.push(sec1);
+            (sec2!==sec0)&&rslt.push(sec2);
+            (sec3!==sec0)&&(sec3!==sec2)&&(sec3!==sec1)&&rslt.push(sec3);
+            for(let i=0,len=rslt.length;i<len;i++){
+                let sec = rslt[i];
+                let o=sec.objects;
+                for(let j=0,jl=o.length;j<jl;j++){
+                    let ob=o[j]
+                    if((!ob.dynamic)||(ob===obj))continue;
+                    let dx=op.x-ob.position.x;
+                    let dz=op.z-ob.position.z;
+                    let sdist = (dx*dx+dz*dz);
+                    if(sdist<(rad*rad))
+                        collisions.push(ob)
+                }
+            }
+            return collisions;
+        }
+
         this.move = (obj,mvec)=>{
             //(obj.userData) && (obj=this.objects[obj.userData.objectId])
             obj.view.position.add(mvec);
@@ -172,6 +213,7 @@ export default class World {
         }
 
         let dframe = []
+        
         this.update = (target)=>{
             if (!this.sectorGenerator)
                 return;

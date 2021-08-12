@@ -6,16 +6,22 @@ export default function PostUI(THREE,postProcessing){
     ctx.gui = new GUI();
 
 
-    function uniformChanged(newValue) {
-        let u = ctx.getUniform(this.path)
-        let s= this.path.slice(-1)
-        if(typeof u[s] !== 'object')
-            u[s] = newValue;
-        else
-            u[s].setRGB(newValue.r/255,newValue.g/255,newValue.b/255);
-        //console.log("UChange")
-    }
+    function bindUniformChanged(path) {
 
+        return function uniformChanged(newValue) {
+            (!this.path) && (this.path=path); 
+            if(!this.path)
+                return
+            let u = ctx.getUniform(this.path)
+            let s= this.path.slice(-1)
+            if(typeof u[s[0]] !== 'object')
+                u[s] = newValue;
+            else
+                u[s].setRGB(newValue.r/255,newValue.g/255,newValue.b/255);
+            //console.log("UChange")
+        }
+
+    }
 
     ctx.rebuildGUI = function() {
         // Init control Panel
@@ -30,7 +36,9 @@ export default function PostUI(THREE,postProcessing){
         var f1 = gui.addFolder('PostProcessing');
 
         f1.add(ctx, 'enabled', false,true, false).name('enabled').onChange((nv)=>{ });
-
+        
+        let allPaths = []
+        
         for (const i in ctx.activePasses) {
             if (!Object.prototype.hasOwnProperty.call(ctx.activePasses, i))
                 continue;
@@ -53,6 +61,8 @@ export default function PostUI(THREE,postProcessing){
                 }
             }
 
+            
+
             //for( let u in pass.uniforms) paths.push([pname,'uniforms',u,'value'])
             //for( let u in pass.copyUniforms) paths.push([pname,'copyUniforms',u,'value'])
 
@@ -64,7 +74,7 @@ export default function PostUI(THREE,postProcessing){
                 var arng = Math.abs(value) * 2;
                 if (arng < 10)
                     arng = 10;
-                let f = fld.add( ctx.getUniform(path) , path.slice(-1), -arng, arng, 0.001).name(fieldName).onChange(uniformChanged);
+                let f = fld.add( ctx.getUniform(path) , path.slice(-1), -arng, arng, 0.001).name(fieldName).onChange(bindUniformChanged(path));
                 f.path = path;
                 return f;
             }
@@ -84,7 +94,7 @@ export default function PostUI(THREE,postProcessing){
                         createNumericField(u,p,un.value);
                     } else if (typeof un.value == "object") {
                         if (un.value instanceof THREE.Color) {
-                            let f= fld.addColor(un, 'value').name(u).onChange(uniformChanged);
+                            let f= fld.addColor(un, 'value').name(u).onChange(bindUniformChanged(p));
                             f.path = p;
                         } else if (un.value instanceof THREE.Vector3) {
 
@@ -104,14 +114,16 @@ export default function PostUI(THREE,postProcessing){
                 } else if (un.type == 't') {// Texture channel... ignore
                 } else if (un.type == 'c') {
                     //Color type...
-                    let f = fld.addColor(un, 'value').name(u).onChange(uniformChanged);
+                    let f = fld.addColor(un, 'value').name(u).onChange(bindUniformChanged(p));
                     f.path = p;
-                } else {// console.log("pass:",pname,u,un.type);
+                } else {
+                     console.log("UNKNOWN pass datatype:",pname,u,un.type);
                 }
             }
             for (var p in paths) {
                 buildParamUi(paths[p])
             }
+            allPaths = allPaths.concat(paths)
         }
     }
     document.addEventListener('postprocessing-rebuilt',()=>{

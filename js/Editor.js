@@ -1,8 +1,8 @@
-import GridMat from "./rendering/GridMat.js"
+import GridMat from "./rendering/components/GridMat.js"
 import OutlineMaterial from "./rendering/OutlineMaterial.js"
 import {TransformControls} from "https://threejs.org/examples/jsm/controls/TransformControls.js";
 
-export default function Editor({THREE, world, renderer, scene, camera, controls}) {
+export default function Editor({THREE, world, renderer, scene, cameraControls, controls}) {
     let {floor} = Math;
     let buttons;
 
@@ -17,7 +17,7 @@ export default function Editor({THREE, world, renderer, scene, camera, controls}
         THREE
     });
 
-    let transformWidget = new TransformControls(camera,renderer.domElement);
+    let transformWidget = new TransformControls(cameraControls.camera,renderer.domElement);
 
     //scene.add(transformWidget);
 
@@ -33,7 +33,7 @@ export default function Editor({THREE, world, renderer, scene, camera, controls}
 
         mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
         mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
-        raycaster.setFromCamera(mouse, camera)
+        raycaster.setFromCamera(mouse, cameraControls.camera)
         return raycaster.intersectObjects(grp, recursive);
     }
 
@@ -78,12 +78,14 @@ export default function Editor({THREE, world, renderer, scene, camera, controls}
     let gridSz = world.gridSize / 126;
     //.1
     let moveSelectionPlane = (dragEnd)=>{
-        vtfm(dragEnd, (e)=>floor((e / gridSz) + .5) * gridSz)
+        //vtfm(dragEnd, (e)=>floor((e / gridSz) + .5) * gridSz)   // Snap the drag distance to a grid.. not as useful...
         dragPlane.position.copy(dragEnd);
     }
     let moveSelected = (dragDelta)=>{
         vtfm(dragDelta, (e)=>floor((e / gridSz) + .5) * gridSz)
         world.selection.forEach(o=>world.move(o, dragDelta))
+        
+        //world.selection.forEach(o=>vtfm(o.position, (e)=>floor((e / gridSz) + .5) * gridSz)) // Snap the objects position to grid...
     }
 
     let highlightMaterials = (root)=>{
@@ -104,6 +106,8 @@ export default function Editor({THREE, world, renderer, scene, camera, controls}
         )
     }
 
+let trackTarget
+let tv3 = new v3()
     let update = ()=>{
 
         if (dragEvt && dragEvt.ctrlKey && buttons) {
@@ -114,6 +118,12 @@ export default function Editor({THREE, world, renderer, scene, camera, controls}
                 break
             }
         }
+        if(trackTarget){
+            trackTarget.localToWorld(tv3.set(0,0,0)).sub(controls.target).multiplyScalar(.1)
+            controls.targetImpulse.add(tv3);
+//            camera.targetImpulse.add(tv3);
+            
+        }
     }
     let vmove = new THREE.Vector3()
 
@@ -123,6 +133,15 @@ export default function Editor({THREE, world, renderer, scene, camera, controls}
         if (e.code == 'NumpadSubtract')
             moveSelected(vmove.set(0, -gridSz, 0))
     }
+
+    document.addEventListener('dblclick',(e)=>{
+        console.log('dbc')
+        mousedown(e)
+        if(dragObject && dragObject.view){
+            trackTarget = (trackTarget == dragObject.view) ? null : dragObject.view;
+        }else
+            trackTarget = null
+    })
     function mousemove(e) {
         dragEvt = e
     }

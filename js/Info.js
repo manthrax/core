@@ -20,7 +20,7 @@ export default class Info{
             txt.shift=function(){
                 let id=this.span.innerText.indexOf('\n');
                 this.span.innerText = (id>=0)?this.span.innerText.slice(id+1):''
-                this.lines-=(id>=0)?1:0;
+                this.lines-=1;//(id>=0)?1:0;
             }
             this.textAreas.push(txt);
             span.style.zIndex = 100;

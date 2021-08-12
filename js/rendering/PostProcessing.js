@@ -152,19 +152,25 @@ document.addEventListener('define-commands',(e)=>{
             passes.copyPass.renderToScreen = true;
         }
         ctx.composerNeedsUpdate = false;
+
+
+        
     }
+
+    var resolution = new THREE.Vector2(window.innerWidth,window.innerHeight)
+    var ooresolution = new THREE.Vector2(1 / window.innerWidth, 1 / window.innerHeight)
+
     ctx.rebuildPasses = function rebuildPasses() {
 
         passes.renderPass = new RenderPass(this.scene,this.camera);
         passes.copyPass = new ShaderPass(CopyShader);
-        var resolution = new THREE.Vector2(window.innerWidth,window.innerHeight)
         var outlinePass = passes.outlinePass = new OutlinePass(resolution,this.scene,this.camera,[]);
         /*var texture = outlinePass.patternTexture = new THREE.Texture(document.createElement('canvas'));
         texture.wrapS = THREE.RepeatWrapping;
         texture.wrapT = THREE.RepeatWrapping;
 */
         passes.fxaaPass = new ShaderPass(FXAAShader);
-        passes.fxaaPass.uniforms['resolution'].value.set(1 / window.innerWidth, 1 / window.innerHeight);
+        passes.fxaaPass.uniforms['resolution'].value = ooresolution;//.set(1 / window.innerWidth, 1 / window.innerHeight);
         //passes.fxaaPass.renderToScreen = true;
 
         passes.bloomPass = new BloomPass(1,25,4.0,256);
@@ -199,11 +205,11 @@ document.addEventListener('define-commands',(e)=>{
         //passes.adaptiveToneMappingPass.uniforms.darkness.value = 2.0;
 
         let params = passes.adaptiveToneMappingPass.params = {
-            //bloomAmount: 1.0,
-            //sunLight: 4.0,
+            bloomAmount: 1.0,
+            sunLight: 4.0,
 
             enabled: true,
-            //avgLuminance:1.66,
+            avgLuminance:1.66,
             middleGrey: .2,
             minLuminance: .003,
             maxLuminance: 1.0,
@@ -243,6 +249,8 @@ document.addEventListener('define-commands',(e)=>{
     ctx.onToggleShaders = onToggleShaders;
     ctx.isActive = true;
     ctx.setSize = function(wid, height) {
+        resolution.set(wid,height);
+        ooresolution.set(1/wid,1/height);
         ctx.composer.setSize(wid, height);
         onToggleShaders();
         //for(var i in passes)
@@ -266,7 +274,10 @@ document.addEventListener('define-commands',(e)=>{
             this.rebuildComposer();
         let saveEncoding = engine.renderer.outputEncoding;
         let saveExposure = engine.renderer.toneMappingExposure;
-        engine.renderer.toneMappingExposure = .1
+
+        engine.renderer.outputEncoding = THREE.LinearEncoding;
+        engine.renderer.toneMappingExposure = 1.
+        
         composer.render(0.1);
 
         engine.renderer.toneMappingExposure = saveExposure;

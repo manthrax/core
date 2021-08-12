@@ -1,6 +1,4 @@
 
-import {createCanvas} from '../rendering/CanvasUtil.js'
-
 function sqNoise1(positionX, seed=0) {
     let BIT_NOISE1 = 0x68E31DA4;
     let BIT_NOISE2 = 0xB5297A4D;
@@ -24,8 +22,14 @@ function sqrng(_seed=0) {
     this.ru32 = ()=>sqNoise1(this.i++, this.seed);
     this.rs32 = ()=>sqNoise1(this.i++, this.seed) - 0x8000000;
     this.ruf32 = ()=>sqNoise1(this.i++, this.seed) / 0x7FFFFFFF;
-    this.rsf32 = ()=>(sqNoise1(this.i++, this.seed) - 0x8000000) / 0x8000000;
+    this.rsf32 = ()=>((sqNoise1(this.i++, this.seed) / 0x7FFFFFFF)-.5)*2;
 }
+
+export {sqrng,sqNoise2}
+
+
+
+import {createCanvas} from '../rendering/CanvasUtil.js'
 
 let test = ()=>{
     let rng = new sqrng(1234)
@@ -41,7 +45,6 @@ let test = ()=>{
         let ctr = 0;
         let msk32 = 0xffffffff
         let scl = 1;
-        //.1
         for (let x = 0; x < sz; x++)
             for (let y = 0; y < sz; y++) {
                 let v = sqNoise2(x * scl, y * scl, seed);

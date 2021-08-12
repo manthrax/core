@@ -1,6 +1,6 @@
 import*as THREE from "https://threejs.org/build/three.module.js";
 import Shaders from './Shaders.js';
-import PRNG from '../PRNG.js';
+import PRNG from '../../math/PRNG.js';
 //let nebula = new Nebula()
 
 export default class NebulaMaterial {

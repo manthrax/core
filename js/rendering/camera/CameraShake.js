@@ -5,11 +5,13 @@ export default function CameraShake({THREE, camera}) {
     let tmp = new THREE.Vector3()
     let time;
 
-    let decay = 1.
-    let speed = 1.3
-    let magnitude = 1
+    let decay = 0.98
+    let speed = 3.3
+    let magnitude = 4
     let endTime = Infinity;
+    let isEnabled = false;
     let beforeRender = (e)=>{
+        if(magnitude<.001) return;
         time = performance.now() / 1000.;
         saveCameraPos.copy(camera.position)
         let wob = (freq,scale,p)=>{
@@ -20,6 +22,8 @@ export default function CameraShake({THREE, camera}) {
     }
 
     let afterRender = (e)=>{
+        if(magnitude<.001) return;
+
         camera.position.copy(saveCameraPos)
         if(time>endTime){
             cs.enabled = false;
@@ -28,11 +32,13 @@ export default function CameraShake({THREE, camera}) {
     }
 
     document.addEventListener('keydown',(e)=>{
-        (e.code=='KeyG')&&cs.impact(10,1,.98,2)
+        (e.code=='KeyG') && cs.impact(10,5,.98,2)
     })
 
-let isEnabled = false;
     let cs = {
+        set camera(c) {
+            camera = c;
+        },
         set enabled(tf) {
             let fn = tf ? 'addEventListener' : 'removeEventListener'
             if(isEnabled!=tf){
@@ -49,6 +55,7 @@ let isEnabled = false;
             cs.enabled = true;
         }
     }
-    cs.enabled = true;
+
+    cs.enabled = false;
     return cs;
 }

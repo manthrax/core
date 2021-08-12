@@ -1,4 +1,4 @@
-import Util from '../Util.js'
+import Util from '../../Util.js'
 export default class Shaders {
     static getFile(url) {
         return new Promise((resolve,reject)=>{

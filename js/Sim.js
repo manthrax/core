@@ -1,4 +1,10 @@
-import {InstanceGroup} from "./rendering/InstanceGroup.js"
+import {InstanceGroup} from "./rendering/components/InstanceGroup.js"
+
+
+let collideBoxSphere=(boxObject,extents,spherePosition,radius)=>{
+    
+}
+
 
 export default class Sim {
     constructor(THREE, prefabs, world) {
@@ -47,7 +53,7 @@ export default class Sim {
 
         let bounce = function() {
             this.view.position.y = abs(sin((now + this.dynamicIndex) * 10.)) * .05
-            this.view.rotation.y += .003;
+            this.view.rotation.y += .02;
             this.rotation && this.rotation.copy(this.view.rotation)
             this.position && (this.view.position.y += this.position.y)
 
@@ -55,14 +61,19 @@ export default class Sim {
 
         let move = function(amt=.1) {
             //  amt = 0;
-
             mvec.set(0, 0, -1).applyQuaternion(this.view.quaternion).multiplyScalar(amt)
             world.move(this, mvec)
+            let hits = world.getCollisions(this);
+            if(hits.length){
+                mvec.multiplyScalar(-1)
+                world.move(this, mvec)
+            }
         }
         let vehUpdate = function() {
             bounce.call(this)
             move.call(this, .1)
         }
+
 
         let chrUpdate = function() {
             bounce.call(this)

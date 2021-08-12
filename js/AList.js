@@ -16,4 +16,11 @@ let removeFromSet = (obj,list,field)=>{
     delete obj[field]
 }
 
+
+let iterateSet = (list,field,fn)=>{
+    for(let l=list.length,i=0;i<l;i++){
+        
+    }
+}
+
 export {addToSet,removeFromSet}

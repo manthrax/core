@@ -1,8 +1,8 @@
 
 
 export default function Minimap(app){
-    let {THREE,renderer,camera,scene} = app;
-    let minicam = camera.clone()
+    let {THREE,renderer,cameraControls,scene} = app;
+    let minicam = cameraControls.camera.clone()
     let saveViewport = new THREE.Vector4()
     scene.add(minicam);
     minicam.aspect = 1.;
@@ -32,6 +32,7 @@ export default function Minimap(app){
             minicam.lookAt(worldCenter)
         }else{
             if(Math.random()<0.01){
+                let camera = cameraControls.camera
                 minicam.position.copy(camera.position)
                 minicam.rotation.copy(camera.rotation)
             }
