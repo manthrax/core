@@ -1,6 +1,6 @@
 export default function Easing({THREE}) {
     let self = {}
-
+    let {min,max,abs,sin,cos,PI} = Math;
     self.fns = function() {
         var x = Math.pow
           , C = Math.sqrt
@@ -61,19 +61,12 @@ export default function Easing({THREE}) {
     self.tc1 = new THREE.Color()
 
     
-    self.tweenPosition = (t,a,b,c)=>{
-        var v0 = self.tv30.copy(a)
-        var v1 = self.tv31.copy(b)
-        v0.multiplyScalar(t);
-        v1.multiplyScalar(1 - t);
-        c.copy(v0).add(v1)
-    }
 
     self.tweenScale = (t,a,b,c)=>{
         self.tweenPosition(t, a, b, c)
-        c.x = Math.max(0.1, c.x)
-        c.y = Math.max(0.1, c.y)
-        c.z = Math.max(0.1, c.z)
+        c.x = max(0.01, c.x)
+        c.y = max(0.01, c.y)
+        c.z = max(0.01, c.z)
     }
 
     self.tweenQuaternion = (t,a,b,c)=>{
@@ -91,12 +84,24 @@ export default function Easing({THREE}) {
     self.tweenEuler = (t,a,b,c)=>{
         var r0 = self.tv30.copy(a)
         var r1 = self.tv31.copy(b)
-        r0.multiplyScalar(t);
-        r1.multiplyScalar(1 - t);
+        r0.multiplyScalar(1 - t);
+        r1.multiplyScalar(t);
         r0.add(r1);
         c.set(r0.x, r0.y, r0.z, a.order);
     }
-
+    self.tweenPosition = (t,a,b,c)=>{
+        var v0 = self.tv30.copy(a)
+        var v1 = self.tv31.copy(b)
+        v0.multiplyScalar(1 - t);
+        v1.multiplyScalar(t);
+        c.copy(v0).add(v1)
+    }
+    
+    self.tweenTransformEuler=(t,a,b,c)=>{
+        self.tweenPosition(t,a.position,b.position,c.position)
+        self.tweenEuler(t,a.rotation,b.rotation,c.rotation)
+        self.tweenScale(t,a.scale,b.scale,c.scale)
+    }
     //--------------- actions *********
 
     class Key {
@@ -259,12 +264,12 @@ var tween = new TWEEN.Tween(vfrom).to(vto, msec).easing(TWEEN.self.Exponential.O
             m.userData.endQuaternion = m.quaternion.clone().setFromAxisAngle(new THREE.Vector3(0,1,0), 90)
             m.userData.startRotation = m.rotation.clone()
             m.userData.endRotation = m.rotation.clone()
-            m.userData.endRotation.y = Math.PI * 2;
+            m.userData.endRotation.y = PI * 2;
 
             m.userData.startColor = m.material.color.clone();
             m.userData.endColor = m.material.color.clone();
-            m.userData.startColor.setHSL(Math.random(), 1.0, 0.5)
-            //        m.userData.endColor.setHSL(Math.random(),1.0,0.5)
+            m.userData.startColor.setHSL(random(), 1.0, 0.5)
+            //        m.userData.endColor.setHSL(random(),1.0,0.5)
             nfns++;
         }
         app.scene.add(mesh)
@@ -280,11 +285,11 @@ var tween = new TWEEN.Tween(vfrom).to(vto, msec).easing(TWEEN.self.Exponential.O
             var scene = app.scene;
 
             var frScale = 1.0 / 320;
-            var t = (Math.abs(app.currentFrame * frScale) % 1)
+            var t = (abs(app.currentFrame * frScale) % 1)
 
             //use clipped sawtooth wave to drive tween tests
-            t = (Math.abs((t - 0.5) * 4.0)) - 0.5
-            t = Math.max(Math.min(1, t), 0);
+            t = (abs((t - 0.5) * 4.0)) - 0.5
+            t = max(min(1, t), 0);
             //console.log(t)
 
             for (var i = 0; i < meshes.length; i++) {

@@ -43,6 +43,7 @@ export default function MultiCamera(THREE){
             self.perspectiveCamera.updateProjectionMatrix();            
         }
     }
+    mc.cameraType='ortho' //
     mc.cameraType='perspective'
 
     return mc;

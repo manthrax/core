@@ -1,4 +1,4 @@
-import {createCanvas} from './CanvasUtil.js'
+import {createCanvas} from '../CanvasUtil.js'
 
 export default function PixelInspector(THREE, sourceTexture) {
     let fontSz = 105;

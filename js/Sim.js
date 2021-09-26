@@ -142,7 +142,7 @@ export default class Sim {
             let obj = spawnInSector(mk, tileObj)
             //obj.locked = true;
             for (let i = 0; i < 5; i++) {
-                let s = spawnInSector(mk, arrayRand(random() > .2 ? categories.chr : random() > .5 ? categories.veh : categories.obj).name)
+                let s = spawnInSector(mk, arrayRand(random() > .1 ? categories.chr : random() > .9 ? categories.veh : categories.obj).name)
                 s.position.x += Math.random() * world.gridSize
                 s.position.z += Math.random() * world.gridSize
                 s.rotation.y = ((Math.random() * 4) | 0) * (Math.PI * .5)

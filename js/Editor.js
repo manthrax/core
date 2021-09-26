@@ -17,9 +17,9 @@ export default function Editor({THREE, world, renderer, scene, cameraControls, c
         THREE
     });
 
-    let transformWidget = new TransformControls(cameraControls.camera,renderer.domElement);
+    let transformWidget;// = new TransformControls(cameraControls.camera,renderer.domElement);
 
-    //scene.add(transformWidget);
+    transformWidget && scene.add(transformWidget);
 
     let dragPlane = new THREE.Mesh(new THREE.PlaneBufferGeometry(world.gridSize * 20,world.gridSize * 20,2,2),gridMat)
 
@@ -63,7 +63,7 @@ export default function Editor({THREE, world, renderer, scene, cameraControls, c
         } else {
             world.select(o, true)
 
-            o.view && transformWidget.position.copy(o.view.position) //&& transformWidget.attach(o.view)
+            o.view && transformWidget && transformWidget.position.copy(o.view.position) //&& transformWidget.attach(o.view)
 
 
 	        //control.attach( mesh );

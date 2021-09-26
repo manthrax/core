@@ -102,6 +102,7 @@ void main(){
     light2.position.set(-1, 2, -1);
 */
             scene.add(lights);
+self.lights = ctx.lights = lights;
 
             //helper = new THREE.DirectionalLightHelper(shadowLight)
             //scene.add(helper)

@@ -39,7 +39,12 @@ function CameraControls({scene,renderer}){
         controls
     })
 
-    window.addEventListener("keyup", e=>(!e.ctrlKey) && (controls.enabled = true))
+let enabled = this.enabled = true;
+this.setEnabled = (tf)=>{
+  enabled = this.enabled = tf;
+  controls.enabled = tf;
+}
+    window.addEventListener("keyup", e=>(!e.ctrlKey) && enabled && (controls.enabled = true))
     window.addEventListener("keydown", e=>(e.ctrlKey) && (controls.enabled = false))
 
 let targetMarker = new THREE.Mesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshBasicMaterial({color:'yellow'}));
@@ -69,6 +74,7 @@ let nv0=new vec3();
 
     this.update = ()=>{
 
+if(!enabled) return;
 
         (camera.targetImpulse) && applyImpulse(camera.targetImpulse,camera.position,.1);
         (controls.targetImpulse) && applyImpulse(controls.targetImpulse,controls.target,.1);

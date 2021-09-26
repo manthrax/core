@@ -1,4 +1,4 @@
-import * as THREE from './three.module.js'
+import * as THREE from 'https://threejs.org/build/three.module.js';
 import ParticleFX from './ParticleFX.js'
 import { noise, curl } from './Noise.js'
 
@@ -133,6 +133,7 @@ export default class GPUPoints extends ParticleFX {
 
       //simMaterial.uniforms.prevFrame.value = this.frameBufferA.texture;
       renderer.setRenderTarget(fbo.renderTargetB)
+      
       // run a frame and store the new positional values in renderTargetB
       renderer.render(fbo.scene, fbo.camera)
       //, renderTargetB, false);
@@ -242,12 +243,12 @@ export default class GPUPoints extends ParticleFX {
 let curlswirl = `
 float st2 = min(0.,sin(time*3.)*2.)-1.;
 vec3 cn = curlNoise(pos.xyz*5.)*.1;      //Particle MOTION
-pos.xyz += cn*.01;//mix(cn,trackn,fract(st2))*.1;
+pos.xyz += cn*.01;    //mix(cn,trackn,fract(st2))*.1;
 float len = length(pos.xyz);
-//vec3  trackPoint = vec3(st2)*5.;
-//vec3 trackn = (pos.xyz-trackPoint)*-(.01*pos.w);
-//float bounceMag = 1.;
-//if(len>1.)pos.xyz = pos.xyz + ( pos.xyz * ((1.-len)*bounceMag) );
+      //vec3  trackPoint = vec3(st2)*5.;
+      //vec3 trackn = (pos.xyz-trackPoint)*-(.01*pos.w);
+      //float bounceMag = 1.;
+      //if(len>1.)pos.xyz = pos.xyz + ( pos.xyz * ((1.-len)*bounceMag) );
 pos.xyz = normalize(pos.xyz);
 
 
@@ -280,19 +281,23 @@ let generateShaders = (params) => {
   let sim_vs = `
 precision mediump float;
 uniform mat4 projectionMatrix;
+uniform mat4 modelMatrix;
 uniform mat4 modelViewMatrix;
 
 attribute vec2 uv; // x,y offsets of each point in texture
 attribute vec3 position;
 varying vec2 vUv;
+varying vec4 vWorldPos;
 void main() {
   vUv = vec2(uv.x, uv.y);
+  vWorldPos = modelViewMatrix * vec4(0,0,0, 1.0);
   gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
 }`
 
   let sim_fs = `
 precision mediump float;
 uniform sampler2D posTex;
+varying vec4 vWorldPos;
 uniform float time;
 
 varying vec2 vUv;

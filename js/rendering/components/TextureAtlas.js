@@ -1,5 +1,5 @@
 
-import potpack from '../3p/potpack.js';
+import potpack from '../../3p/potpack.js';
 
 /**
  * Dynamic texture atlas

@@ -1,27 +1,33 @@
+
+
 import*as THREE from "https://threejs.org/build/three.module.js";
 //import {OrbitControls} from "https://threejs.org/examples/jsm/controls/OrbitControls.js";
 import {GLTFLoader} from "https://threejs.org/examples/jsm/loaders/GLTFLoader.js";
 import {DRACOLoader} from "https://threejs.org/examples/jsm/loaders/DRACOLoader.js";
 import {RGBELoader} from "https://threejs.org/examples/jsm/loaders/RGBELoader.js";
+
 import SkyEnv from "./components/SkyEnv.js"
 import World from "../World.js"
 import ProcGen from "../math/ProcGen.js"
-
 import Info from "../Info.js"
 import Editor from "../Editor.js"
 import PostProcessing from "./PostProcessing.js"
 import PostUI from "./PostUI.js"
 import PostFX from "./PostFX.js"
-import {CameraControls} from "./camera/CameraControls.js"
 import AudioManager from "./AudioManager.js"
+import Network from "./components/Network.js"
+
+
+
+import {CameraControls} from "./camera/CameraControls.js"
+
 
 let cfg={}
+
 
 let initializer = new Promise((resolve,reject)=>{
     let self;
 
-    let  scene, renderer, controls;//camera,
-    let clock;
 
     let skyEnv;
     let world;
@@ -39,12 +45,16 @@ let initializer = new Promise((resolve,reject)=>{
 
     let core = {}
 
+
+    let  scene, renderer, controls;//camera,
+    let clock;
+    
     let aspect = window.innerWidth / window.innerHeight;
     
-
-
-
     scene = new THREE.Scene();
+
+    
+    scene.fog = new THREE.Fog(new THREE.Color(0xdee8f1),80,190);
 
     renderer = new THREE.WebGLRenderer({
         antialias: true,
@@ -89,7 +99,7 @@ let initializer = new Promise((resolve,reject)=>{
     controls = cameraControls.orbitControls;
 
 
-    let audioManager = new AudioManager( THREE )
+    let audioManager; // = new AudioManager( THREE )
 
 
 
@@ -109,6 +119,7 @@ let initializer = new Promise((resolve,reject)=>{
         RGBELoader,
         //camera,
         controls,
+        GLTFLoader,
     }
 
     let pushCameraBehavior = cameraControls.pushCameraBehavior;
@@ -238,34 +249,37 @@ let sectorEnteredEvent = new Event('sector_entered',{detail:0})
     })
 
 
+    
     function onWindowResize(event) {
         let width = window.innerWidth;
         let height = window.innerHeight;
         cameraControls.multiCamera.setSize(width,height)
         renderer.setSize(width, height);
+        document.dispatchEvent(new CustomEvent('renderer-resized',{detail:{width,height}}))
     }
 
-audioManager.load('./assets/blerzat.mp3', 'intro')
+audioManager&&audioManager.load('./assets/blerzat.mp3', 'intro')
 
-audioManager.play('intro')
+audioManager&&audioManager.play('intro')
 
     function animate() {
 
         requestAnimationFrame(animate);
         
-        world && world.update(controls.target)
+        world && world.update(cameraControls.camera.position);//controls.target)
 
         skyChanged && skyChanged();
 
         editor.update()
         
-        audioManager.update(cameraControls.camera)
+        audioManager&&audioManager.update(cameraControls.camera)
         
         render();
     }
 
-    let beforeRenderEvent = new CustomEvent('before-render')
+    let beforeRenderEvent = new CustomEvent('before-render',{detail:{dts:0}})
     let afterRenderEvent = new CustomEvent('after-render')
+    let simTickEvent = new CustomEvent('sim-tick')
 
 
     let postProcessing = new PostProcessing({
@@ -301,20 +315,55 @@ world.defcmd('cameraType',(p)=>{
     cameraControls.cameraType = p[1];
     //camera = cameraControls.getCamera();
 })
+
+
+      let depthPrepass = new THREE.MeshStandardMaterial({
+        colorWrite: false,
+        depthWrite: true,
+      });
+
+
+    let simTime = 0;
+    let lastTime = performance.now()/1000;
+    let simTimeSlice=1/60;
+    let dt;
+    let simAccum=0;
     function render() {
         let time = performance.now() / 1000;
         cameraControls.update();
 
         info.update(time)
 
-        //skyEnv&&skyEnv.update()
 
+        dt = time-lastTime;
+        simAccum+=dt;
+        while(simAccum>=simTimeSlice){
+        	simAccum-=simTimeSlice;
+            document.dispatchEvent(simTickEvent);
+            if(simAccum>(simTimeSlice*10))simAccum = 0;
+        }
+        lastTime = time;
+        
+        //skyEnv&&skyEnv.update()
+        beforeRenderEvent.detail.dts=dt;
         document.dispatchEvent(beforeRenderEvent);
 
         if (postProcessing.enabled)
             postProcessing.render()
-        else
-            renderer.render(scene, cameraControls.camera);
+        else{
+
+        	if(self.depthPrepassEnabled){
+				scene.overrideMaterial = depthPrepass;
+				renderer.render(scene, cameraControls.camera);
+				renderer.autoClear = renderer.autoClearColor = renderer.autoClearDepth = renderer.autoClearStencil = false;
+				scene.overrideMaterial = null;
+				renderer.render(scene, cameraControls.camera);
+				renderer.autoClear = renderer.autoClearColor = renderer.autoClearDepth = renderer.autoClearStencil = true;
+        	}else{
+				renderer.render(scene, cameraControls.camera);
+        	}
+
+        }
         document.dispatchEvent(afterRenderEvent);
     }
     
@@ -333,3 +382,99 @@ function Renderer(_cfg) {
 
 
 export default Renderer;
+
+
+Renderer.injectCSS=()=>{
+
+let css =`
+body {
+	margin: 0;
+	background-color: #000;
+	color: #fff;
+	font-family: Monospace;
+	font-size: 13px;
+	line-height: 24px;
+	overscroll-behavior: none;
+}
+
+a {
+	color: #ff0;
+	text-decoration: none;
+}
+
+a:hover {
+	text-decoration: underline;
+}
+
+button {
+	cursor: pointer;
+	text-transform: uppercase;
+}
+
+#info {
+	position: absolute;
+	top: 0px;
+	width: 100%;
+	padding: 10px;
+	box-sizing: border-box;
+	text-align: center;
+	-moz-user-select: none;
+	-webkit-user-select: none;
+	-ms-user-select: none;
+	user-select: none;
+	pointer-events: none;
+	z-index: 1; /* TODO Solve this in HTML */
+}
+
+a, button, input, select {
+	pointer-events: auto;
+}
+
+.dg.ac {
+	-moz-user-select: none;
+	-webkit-user-select: none;
+	-ms-user-select: none;
+	user-select: none;
+	z-index: 2 !important; /* TODO Solve this in HTML */
+}
+
+#overlay {
+	position: absolute;
+	font-size: 16px;
+	z-index: 2;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex-direction: column;
+	background: rgba(0,0,0,0.7);
+}
+
+#overlay button {
+	background: transparent;
+	border: 0;
+	border: 1px solid rgb(255, 255, 255);
+	border-radius: 4px;
+	color: #ffffff;
+	padding: 12px 18px;
+	text-transform: uppercase;
+	cursor: pointer;
+}
+
+#notSupported {
+	width: 50%;
+	margin: auto;
+	background-color: #f00;
+	margin-top: 20px;
+	padding: 10px;
+}
+`
+var linkElement = document.createElement('link');
+linkElement.setAttribute('rel', 'stylesheet');
+linkElement.setAttribute('type', 'text/css');
+linkElement.setAttribute('href', 'data:text/css;charset=UTF-8,' + encodeURIComponent(css));
+document.head.appendChild(linkElement)
+}
