@@ -13,6 +13,7 @@ let registry={
     UIText: '../../xun/src/js/app/UIText.js',
     Characters: './rendering/components/Characters.js',
     Comms:'../../xun/src/js/Comms.js',
+    Easing:'./math/Easing.js',
 
 }
 

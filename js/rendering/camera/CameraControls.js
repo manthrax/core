@@ -49,7 +49,7 @@ this.setEnabled = (tf)=>{
 
 let targetMarker = new THREE.Mesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshBasicMaterial({color:'yellow'}));
 
-scene.add(targetMarker)
+//scene.add(targetMarker)
 let tv0 = new THREE.Vector3()
 
     let applyImpulse=(imp,to,accel)=>{

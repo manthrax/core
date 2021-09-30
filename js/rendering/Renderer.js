@@ -18,11 +18,16 @@ import AudioManager from "./AudioManager.js"
 import Network from "./components/Network.js"
 
 
+let beforeRenderEvent = new CustomEvent('before-render',{detail:{dts:0}})
+let afterRenderEvent = new CustomEvent('after-render')
+let simTickEvent = new CustomEvent('sim-tick')
+
 
 import {CameraControls} from "./camera/CameraControls.js"
 
 
 let cfg={}
+
 
 
 let initializer = new Promise((resolve,reject)=>{
@@ -56,11 +61,14 @@ let initializer = new Promise((resolve,reject)=>{
     
     scene.fog = new THREE.Fog(new THREE.Color(0xdee8f1),80,190);
 
-    renderer = new THREE.WebGLRenderer({
+    let rcfg={
         antialias: true,
         //alpha: true,
         //logarithmicDepthBuffer:true
-    });
+
+    }
+    if(cfg.canvas)rcfg.canvas = canvas;
+    renderer = new THREE.WebGLRenderer(rcfg);
 
     //renderer.toneMapping = THREE.ACESFilmicToneMapping
     renderer.toneMapping = THREE.LinearToneMapping;
@@ -276,10 +284,6 @@ audioManager&&audioManager.play('intro')
         
         render();
     }
-
-    let beforeRenderEvent = new CustomEvent('before-render',{detail:{dts:0}})
-    let afterRenderEvent = new CustomEvent('after-render')
-    let simTickEvent = new CustomEvent('sim-tick')
 
 
     let postProcessing = new PostProcessing({
