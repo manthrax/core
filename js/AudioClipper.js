@@ -135,6 +135,10 @@ if(false)
         }
 
         self.playRandomSample = ()=>{
+            self.playSample((Math.random() * (spans.length-1))|0)
+        }
+
+        self.playSample = (sampleIndex)=>{
 
             if (source1) {
                 source1.stop();
@@ -146,7 +150,7 @@ if(false)
             source1.connect(context.destination);
 
             if (spans.length > 1) {
-                let si = (Math.random() * (spans.length-1))|0;
+                let si = sampleIndex%(spans.length-1);
                 let ss = (spans[si] / (samp.sampleRate ));
                 let se = (spans[si + 1] / (samp.sampleRate ));
                 source1.start(0, ss, se - ss);
@@ -254,6 +258,8 @@ if(!ctx)return
 }
 
         let renderSpan=(ss,se,duration)=>{
+            if(!ctx)
+                return;
             ctx.strokeStyle = 'rgba(0,255,0,.5)'
             //ctx.beginPath();
             let xratio = cwidth/duration;

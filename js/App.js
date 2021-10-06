@@ -14,7 +14,7 @@ let registry={
     Characters: './rendering/components/Characters.js',
     Comms:'../../xun/src/js/Comms.js',
     Easing:'./math/Easing.js',
-
+    AudioClipper:'./AudioClipper.js',
 }
 
 export default class App{

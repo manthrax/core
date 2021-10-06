@@ -65,7 +65,7 @@ void main(){
             //lights.add(ambientLight)
 
             shadowLight = new THREE.DirectionalLight("white",1);
-            shadowLight.shadow.enabled = true;
+            //shadowLight.shadow.enabled = true;
 
             /*
     let timeOfDay = 930 //1015

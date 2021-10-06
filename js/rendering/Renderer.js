@@ -150,7 +150,7 @@ let initializer = new Promise((resolve,reject)=>{
         resolve(self)
     }
 
-    if (cfg.sky !== 'false') {
+    if (cfg.sky!=='false') {
         new SkyEnv(core).then(rslv)
     } else
         rslv()

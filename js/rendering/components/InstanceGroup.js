@@ -4,11 +4,13 @@ function InstanceGroup(THREE) {
     class InstanceGroup extends THREE.Object3D {
         constructor() {
             super();
+            this.reset=()=>{
             this.instances = [];
             this.instanceMeshRoot = new THREE.Group();
             this.instanceMeshCache = {};
             this.objects = new THREE.Group();
-
+            }
+            this.reset();
             let instanced = true;
             if (instanced) {
                 THREE.Object3D.prototype.add.call(this, this.instanceMeshRoot);
@@ -28,7 +30,7 @@ function InstanceGroup(THREE) {
 
                     let m = new Float32Array(startingCount * 3)
                     for (let i = 0; i < m.length; i++)
-                        m[i] = Math.random()
+                        m[i] = 1;//Math.random()
                     mesh.instanceColor = new THREE.InstancedBufferAttribute(m,3)
                     mesh.geometry.setAttribute('color', mesh.instanceColor);
                     mesh.instanceColor.setUsage(THREE.DynamicDrawUsage);
@@ -52,8 +54,8 @@ function InstanceGroup(THREE) {
                             let m = new Float32Array(mesh.instanceColor.array.length * 2);
                             nmesh.instanceColor = new THREE.InstancedBufferAttribute(m,3)
                             nmesh.geometry.setAttribute('color', mesh.instanceColor);
-                            for (let i = m.length; i; )
-                                m[--i] = Math.random()
+                            if(0)for (let i = m.length; i; )
+                                m[--i] = 1;//Math.random()
                             nmesh.instanceColor.array.set(mesh.instanceColor.array);
                         }
                         nmesh.instanceColor.needsUpdate = true;
