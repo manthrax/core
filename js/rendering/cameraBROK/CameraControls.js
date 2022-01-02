@@ -9,19 +9,19 @@ let {PI,min,max} = Math;
 function CameraControls({scene,renderer}){
     
     let multiCamera = this.multiCamera = new MultiCamera(THREE)
-    let camera = multiCamera.camera;
+    let camera = multiCamera.cameraRig;
 
     //this.getCamera = ()=>{return this.multiCamera.camera;}
 
     let cameraShake = new CameraShake({
         THREE,
         camera,renderer
-    }).enabled = true;
+    }).enabled = false;
     
     let raycaster = new MouseRaycaster(THREE);
 
 
-    let controls = this.orbitControls = new OrbitControls(camera,renderer.domElement);
+    let controls = this.orbitControls = new OrbitControls(multiCamera.activeCamera,renderer.domElement);
     //  controls.autoRotate= true
     //  controls.autoRotateSpeed = 1
 
@@ -44,8 +44,8 @@ this.setEnabled = (tf)=>{
   enabled = this.enabled = tf;
   controls.enabled = tf;
 }
-    window.addEventListener("keyup", e=>(!e.ctrlKey) && enabled && (controls.enabled = true))
-    window.addEventListener("keydown", e=>(e.ctrlKey) && (controls.enabled = false))
+    window.addEventListener("keyup", e=>(!e.ctrlKey) && (!e.shiftKey) && enabled && (controls.enabled = true))
+    window.addEventListener("keydown", e=>(e.ctrlKey||e.shiftKey) && (controls.enabled = false))
 
 let targetMarker = new THREE.Mesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshBasicMaterial({color:'yellow'}));
 
@@ -74,6 +74,10 @@ let nv0=new vec3();
 
     this.update = ()=>{
 
+        return this.orbitControls.update()
+
+
+
 if(!enabled) return;
 
         (camera.targetImpulse) && applyImpulse(camera.targetImpulse,camera.position,.1);
@@ -101,7 +105,7 @@ nv0.copy(camera.position).sub(controls.target);
 //nv0.y = max(.1,nv0.y);
 camera.position.copy(controls.target).add(nv0)
 
-        controls.update()
+        //controls.update()
 
 
 

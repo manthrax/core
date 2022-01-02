@@ -60,18 +60,39 @@ export default function AudioClipper(path = "crunch.ogg"){
         for (let i = 0; i < this.urlList.length; ++i)
             this.loadBuffer(this.urlList[i], i);
     }
-
+    let globalGainNode
+    let dynamicsCompressorNode
     this.init=function init() {
         // Fix up prefixing
         window.AudioContext = window.AudioContext || window.webkitAudioContext;
         context = new AudioContext();
-        bufferLoader = new BufferLoader(context,[path],finishedLoading);
-        bufferLoader.load();
+
+    globalGainNode = new GainNode(context,{gain:.1});
+    dynamicsCompressorNode = new DynamicsCompressorNode(context);
+        globalGainNode.connect(dynamicsCompressorNode)
+        dynamicsCompressorNode.connect(context.destination)
+
+        if(path){
+            bufferLoader = new BufferLoader(context,path instanceof Array ? path : [path],finishedLoading);
+            bufferLoader.load();
+        }
     }
 
+    let playSoundEvent = new Event('play-sound');
 
+    this.playSound = (index)=>{
+        playSoundEvent.index = index;
+        document.dispatchEvent(playSoundEvent);
+    }
     function finishedLoading(bufferList) {
         console.log("Loading...");
+
+
+        document.addEventListener('play-sound',(e)=>{
+            self.playBuffer(e.index)
+        })
+
+
         let cdata = bufferList[0].getChannelData(0);
 
 if(false)
@@ -137,6 +158,25 @@ if(false)
         self.playRandomSample = ()=>{
             self.playSample((Math.random() * (spans.length-1))|0)
         }
+    
+
+        let source2;    
+        self.playBuffer=(index)=>{
+            if(!context)
+                return;
+            if(!bufferList[index])
+                return;
+            if (source2) {
+                source2.stop();
+                source2 = null;
+            }
+            source2 = context.createBufferSource();
+            let samp = source2.buffer = bufferList[index];
+            source2.connect(globalGainNode);
+            source2.start(0);
+        }
+
+
 
         self.playSample = (sampleIndex)=>{
 
@@ -147,7 +187,7 @@ if(false)
             
             source1 = context.createBufferSource();
             let samp = source1.buffer = bufferList[0];
-            source1.connect(context.destination);
+            source1.connect(globalGainNode);
 
             if (spans.length > 1) {
                 let si = sampleIndex%(spans.length-1);

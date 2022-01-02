@@ -1,6 +1,6 @@
 import Easing from "../math/Easing.js"
 
-export default function PostFX(THREE,postProcessing){
+export default function PostFX(THREE,postProcessing,postUI){
     let ctx=postProcessing
     let easing = new Easing({
         THREE

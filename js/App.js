@@ -14,14 +14,14 @@ let registry={
     Characters: './rendering/components/Characters.js',
     Comms:'../../xun/src/js/Comms.js',
     Easing:'./math/Easing.js',
-    AudioClipper:'./AudioClipper.js',
+    AudioClipper:'./AudioClipper.js'
 }
 
 export default class App{
-    constructor(){
+    constructor(_registry = registry){
         let getreg = (k)=>{
-            if(!registry[k])console.error('unknown module:', k);
-            return registry[k]
+            if(!_registry[k])console.error('unknown module:', k);
+            return _registry[k]
         }
       this.components = new Proxy({},{
        get: async function(obj, prop) {

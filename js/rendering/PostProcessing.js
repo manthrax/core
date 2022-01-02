@@ -44,8 +44,36 @@ import {RGBShiftShader} from "https://threejs.org/examples/jsm/shaders/RGBShiftS
 import {SepiaShader} from "https://threejs.org/examples/jsm/shaders/SepiaShader.js"
 import {VerticalBlurShader} from "https://threejs.org/examples/jsm/shaders/VerticalBlurShader.js"
 import {VignetteShader} from "https://threejs.org/examples/jsm/shaders/VignetteShader.js"
-
 import {FXAAShader} from "https://threejs.org/examples/jsm/shaders/FXAAShader.js"
+
+
+
+/*
+
+				const ssaoPass = new SSAOPass( scene, camera, width, height );
+				ssaoPass.kernelRadius = 16;
+				composer.addPass( ssaoPass );
+
+				// Init gui
+				const gui = new GUI();
+
+				gui.add( ssaoPass, 'output', {
+					'Default': SSAOPass.OUTPUT.Default,
+					'SSAO Only': SSAOPass.OUTPUT.SSAO,
+					'SSAO Only + Blur': SSAOPass.OUTPUT.Blur,
+					'Beauty': SSAOPass.OUTPUT.Beauty,
+					'Depth': SSAOPass.OUTPUT.Depth,
+					'Normal': SSAOPass.OUTPUT.Normal
+				} ).onChange( function ( value ) {
+
+					ssaoPass.output = parseInt( value );
+
+				} );
+				gui.add( ssaoPass, 'kernelRadius' ).min( 0 ).max( 32 );
+				gui.add( ssaoPass, 'minDistance' ).min( 0.001 ).max( 0.02 );
+				gui.add( ssaoPass, 'maxDistance' ).min( 0.01 ).max( 0.3 );
+
+*/
 
 export default function PostProcessing(engine) {
 
@@ -60,8 +88,13 @@ export default function PostProcessing(engine) {
     var testParams, testPass;
     var passes;
 document.addEventListener('define-commands',(e)=>{
-    e.detail.commands.post=(p)=>{ctx.enabled = p[1] == true;}    
-    e.detail.commands.blur=(p)=>{ctx.blurWorld(p[1] == true);}
+    e.detail.commands.post=(p)=>{
+        ctx.enabled = p[1] == true;    
+        ctx.postUI && ctx.postUI.setPostProcessingEnabled(active);
+    }  
+    e.detail.commands.blur=(p)=>{
+        ctx.blurWorld(p[1] == true);
+        }
 })
 
     ctx.setScene = function(s) {
@@ -81,6 +114,7 @@ document.addEventListener('define-commands',(e)=>{
     ctx.setPassActivation = function(passName, active) {
         if (this.activePasses[passName] != active) {
             this.activePasses[passName] = active;
+            ctx.postUI && ctx.postUI.setPassActivation(active);
             ctx.composerNeedsUpdate = true;
         }
     }
@@ -97,6 +131,7 @@ document.addEventListener('define-commands',(e)=>{
         this.camera = engine.camera.current;
         engine.postProcessing = this;
         passes = this.passes = {};
+        
         ctx.passList = ['bleach', 'bloom', 'brightnessContrast', 'colorCorrection', 'colorify', 'dotScreen', 'film', 'focus', 'horizontalBlur', 'hueSaturation', 'kaleido', 'luminosity', 'mirror', 'RGBShift', 'sepia', 'verticalBlur', 'vignette', 'outline', 'fxaa', 'unrealBloom', 'adaptiveToneMapping'];
         ctx.activePasses = {};
 
@@ -117,7 +152,12 @@ document.addEventListener('define-commands',(e)=>{
         return root;
     }
 
-    ctx.enabled = false;
+   ctx.enabled = false;
+    ctx.setActive=function(state){
+
+        ctx.isActive = state;
+        ctx.postUI && ctx.postUI.setPostProcessingEnabled(ctx.isActive)
+    }
 
     ctx.rebuildComposer = function rebuildComposer() {
         if (!this.composer) {
@@ -128,22 +168,26 @@ document.addEventListener('define-commands',(e)=>{
         // Add Shader Passes to Composer
         composer.addPass(passes.renderPass);
         //	var gui = new dat.GUI();
-        ctx.isActive = false;
+        ctx.setActive(false)
         var lastPass;
         for (var i = 0; i < ctx.passList.length; i++) {
             if (ctx.activePasses[ctx.passList[i]]) {
-                var pass = passes[`${ctx.passList[i]}Pass`];
+            	let pname = `${ctx.passList[i]}Pass`
+                var pass = passes[ pname ];
                 //passes.fxaaPass.uniforms[ 'resolution' ].value.set( 1 / window.innerWidth, 1 / window.innerHeight );
 
                 composer.addPass(pass);
-                ctx.isActive = true;
+        
 
+                pass.needsSwap = true;
                 pass.renderToScreen = false;
-
+                
+                ctx.postUI && ctx.postUI.configurePass(pname,pass);
                 lastPass = pass;
             }
         }
         if (lastPass) {
+			ctx.setActive(true)
             lastPass.renderToScreen = true;
             lastPass.needsSwap = false;
         } else {
@@ -247,7 +291,7 @@ document.addEventListener('define-commands',(e)=>{
     }
     .bind(this);
     ctx.onToggleShaders = onToggleShaders;
-    ctx.isActive = true;
+    ctx.setActive(true);
     ctx.setSize = function(wid, height) {
         resolution.set(wid,height);
         ooresolution.set(1/wid,1/height);
@@ -275,8 +319,8 @@ document.addEventListener('define-commands',(e)=>{
         let saveEncoding = engine.renderer.outputEncoding;
         let saveExposure = engine.renderer.toneMappingExposure;
 
-        engine.renderer.outputEncoding = THREE.LinearEncoding;
-        engine.renderer.toneMappingExposure = 1.
+        engine.renderer.outputEncoding = THREE.sRGBEncoding;//LinearEncoding;
+        engine.renderer.toneMappingExposure = 1
         
         composer.render(0.1);
 
@@ -285,7 +329,11 @@ document.addEventListener('define-commands',(e)=>{
         // stats.update();
     }
     .bind(this);
-
+/*
+    document.addEventListener('before-render',()=>{
+    	ctx.render();
+    })
+*/
     document.addEventListener('glCreated', ()=>{
         this.init();
         this.rebuildPasses();

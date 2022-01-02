@@ -53,8 +53,10 @@ export default class Info{
         t.style.right='100%'
         t.style.width='8%'
 //? ⚙️ 👁 🔀 
-        let btns = `🆕 🔍 🧠 + - ⎌`.split(' ').map(e=>`<span>${e}</span>`).join('</br>');
-        this.toolsHtml(btns);
+
+//        let btns = `🆕 🔍 🧠 + - ⎌`.split(' ').map(e=>`<span>${e}</span>`).join('</br>');
+//        this.toolsHtml(btns);
+        
         t.style.pointerEvents = 'all'
         t.style.pointerEvents = 'all'
         for(let i=0;i<t.childNodes.length;i+=2){
@@ -77,7 +79,7 @@ export default class Info{
         THREE.DefaultLoadingManager.onLoad = 
         THREE.DefaultLoadingManager.onStart =
         THREE.DefaultLoadingManager.onProgress = updateLoads
-        this.message('rdy')
+        //this.message('rdy')
         this.chat('')//<enter to chat>')
         this.update = (newTimeSeconds=performance.now()/1000)=>{
             for(let i=0,ti;(i<this.textAreas.length)&&(ti=this.textAreas[i]);i++){

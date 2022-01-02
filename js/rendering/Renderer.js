@@ -1,5 +1,6 @@
 import*as THREE from "https://threejs.org/build/three.module.js";
 //import {OrbitControls} from "https://threejs.org/examples/jsm/controls/OrbitControls.js";
+import {SVGLoader} from "https://threejs.org/examples/jsm/loaders/SVGLoader.js";
 import {GLTFLoader} from "https://threejs.org/examples/jsm/loaders/GLTFLoader.js";
 import {DRACOLoader} from "https://threejs.org/examples/jsm/loaders/DRACOLoader.js";
 import {RGBELoader} from "https://threejs.org/examples/jsm/loaders/RGBELoader.js";
@@ -14,8 +15,17 @@ import PostUI from "./PostUI.js"
 import PostFX from "./PostFX.js"
 import AudioManager from "./AudioManager.js"
 import Network from "./components/Network.js"
-
 let beforeRenderEvent = new CustomEvent('before-render',{
+    detail: {
+        dts: 0
+    }
+})
+let justBeforeRenderEvent = new CustomEvent('just-before-render',{
+    detail: {
+        dts: 0
+    }
+})
+let updateControlsEvent = new CustomEvent('update-controls',{
     detail: {
         dts: 0
     }
@@ -23,7 +33,7 @@ let beforeRenderEvent = new CustomEvent('before-render',{
 let afterRenderEvent = new CustomEvent('after-render')
 let simTickEvent = new CustomEvent('sim-tick')
 
-import {CameraControls} from "./camera/CameraControls.js"
+import {Cameras} from "./camera/Cameras.js"
 
 let cfg = {}
 
@@ -39,6 +49,7 @@ let initializer = new Promise((resolve,reject)=>{
 
     let {min, max, abs, PI, floor} = Math;
 
+    const svgLoader = new SVGLoader()
     const gltfLoader = new GLTFLoader()
     const dracoLoader = new DRACOLoader();
     dracoLoader.setDecoderPath('https://threejs.org/examples/js/libs/draco/');
@@ -79,11 +90,17 @@ let initializer = new Promise((resolve,reject)=>{
 
     //renderer.toneMappingExposure = .25;
     renderer.outputEncoding = THREE.sRGBEncoding
-
+    //renderer.domElement.style.width=
+    renderer.domElement.style.position='absolute'
+    renderer.domElement.style.width='100%'
+    renderer.domElement.style.height='100%'
+//renderer.domElement.style.aspectRatio = 'auto'
     renderer.setClearColor("black", 1);
     renderer.setPixelRatio(window.devicePixelRatio);
     document.body.appendChild(renderer.domElement);
-
+    document.body.style.margin = '0px'
+    //document.body.style.width =
+    //document.body.style.height = '100%'
     /*
     camera = new THREE.PerspectiveCamera(90,window.innerWidth / window.innerHeight,0.1,10000);
     let csz = 640
@@ -96,22 +113,23 @@ let initializer = new Promise((resolve,reject)=>{
     camera.position.set(10, 10, 10);
 */
 
-    let cameraControls = new CameraControls({
+    let cameras = new Cameras({
+        THREE,
         scene,
         renderer
     })
 
     //camera = cameraControls.multiCamera.camera;
 
-    controls = cameraControls.orbitControls;
+    controls = cameras.orbitControls;
 
     let audioManager;
     // = new AudioManager( THREE )
 
     clock = new THREE.Clock();
 
-    onWindowResize();
-    window.addEventListener("resize", onWindowResize, false);
+    resize();
+    //window.addEventListener("resize", resize, false);
 
     world = new World(scene)
 
@@ -126,17 +144,21 @@ let initializer = new Promise((resolve,reject)=>{
         GLTFLoader,
     }
 
-    let pushCameraBehavior = cameraControls.pushCameraBehavior;
-    pushCameraBehavior.enabled = false;
+    let rendererPaused = false;
 
+    let pauseRenderer = (paused)=>{
+        rendererPaused = paused
+    }
     let rslv = (se)=>{
         skyEnv = se;
 
         self = {
             THREE,
             gltfLoader,
+            svgLoader,
             //camera,
-            cameraControls,
+            editor,
+            cameras,
             scene,
             renderer,
             controls,
@@ -144,13 +166,13 @@ let initializer = new Promise((resolve,reject)=>{
             skyEnv,
             world,
             info,
-            pushCameraBehavior,
+            pauseRenderer
         }
 
         resolve(self)
     }
 
-    if (cfg.sky!=='false') {
+    if (cfg.sky !== 'false') {
         new SkyEnv(core).then(rslv)
     } else
         rslv()
@@ -165,7 +187,7 @@ let initializer = new Promise((resolve,reject)=>{
         info.chat(dlt.x, dlt.z)
         dlt.sub(controls.target)
         controls.target.add(dlt)
-        cameraControls.camera.position.add(dlt)
+        cameras.current.position.add(dlt)
 
     }
     )
@@ -216,7 +238,7 @@ let initializer = new Promise((resolve,reject)=>{
 
         }
     })
-    window.addEventListener("keyup", function(e) {})
+    // window.addEventListener("keyup", function(e) {})
 
     let sectorEnteredEvent = new Event('sector_entered',{
         detail: 0
@@ -240,45 +262,108 @@ let initializer = new Promise((resolve,reject)=>{
 
     //scene.add(camera);
 
-    let editor = new Editor({
+    let editor = core.editor = new Editor({
         THREE,
         world,
         renderer,
         scene,
         controls,
-        cameraControls,
+        cameras,
         //camera
     })
+    editor.raycastTargets = scene.children;
+    editor.raycastRecursive = false;
 
-    function onWindowResize(event) {
-        let width = window.innerWidth;
-        let height = window.innerHeight;
-        cameraControls.multiCamera.setSize(width, height)
-        renderer.setSize(width, height);
-        document.dispatchEvent(new CustomEvent('renderer-resized',{
-            detail: {
-                width,
-                height
-            }
-        }))
+    let {Matrix4, Ray, Sphere} = THREE;
+    const _inverseMatrix$2 = /*@__PURE__*/
+    new Matrix4();
+    const _ray$2 = /*@__PURE__*/
+    new Ray();
+    const _sphere$3 = /*@__PURE__*/
+    new Sphere();
+
+    function raycastBox(raycaster, intersects) {
+
+        const geometry = this.geometry;
+        const material = this.material;
+        const matrixWorld = this.matrixWorld;
+
+        if (material === undefined)
+            return;
+
+        // Checking boundingSphere distance to ray
+
+        if (geometry.boundingSphere === null)
+            geometry.computeBoundingSphere();
+
+        _sphere$3.copy(geometry.boundingSphere);
+        _sphere$3.applyMatrix4(matrixWorld);
+
+        if (raycaster.ray.intersectsSphere(_sphere$3) === false)
+            return;
+
+        //
+
+        _inverseMatrix$2.copy(matrixWorld).invert();
+        _ray$2.copy(raycaster.ray).applyMatrix4(_inverseMatrix$2);
+
+        // Check boundingBox before continuing
+
+        if (geometry.boundingBox !== null) {
+
+            if (_ray$2.intersectsBox(geometry.boundingBox) === false)
+                return;
+
+        }
+    }
+
+    function resize() {
+        let width = renderer.domElement.clientWidth;//window.innerWidth;
+        let height = renderer.domElement.clientHeight;//window.innerHeight;
+        if((renderer.domElement.width!==width)||(renderer.domElement.height!==height)){
+			cameras.setSize(width, height)
+			renderer.setSize(width, height, false);
+			document.dispatchEvent(new CustomEvent('renderer-resized',{
+				detail: {
+					width,
+					height
+				}
+			}))
+        }
     }
 
     audioManager && audioManager.load('./assets/blerzat.mp3', 'intro')
 
     audioManager && audioManager.play('intro')
 
+    let travTime;
+    document.addEventListener('object-clicked', (dob)=>{
+
+        console.log("Object clicked:", travTime, editor.raycastTime);
+    }
+    );
+    let meshes = []
+
     function animate() {
 
-        requestAnimationFrame(animate);
+        //requestAnimationFrame(animate);
+        resize()
 
-        world && world.update(cameraControls.camera.position);
+        world && world.update(cameras.current.position);
         //controls.target)
 
         skyChanged && skyChanged();
 
         editor.update()
 
-        audioManager && audioManager.update(cameraControls.camera)
+        audioManager && audioManager.update(rig)
+
+        travTime = performance.now()
+
+        meshes.length = 0;
+        scene.traverse(e=>e.isMesh && meshes.push(e))
+        editor.raycastTargets = meshes;
+        travTime = performance.now() - travTime;
 
         render();
     }
@@ -287,19 +372,21 @@ let initializer = new Promise((resolve,reject)=>{
         THREE,
         renderer,
         scene,
-        camera: {
-            current: cameraControls.multiCamera.camera
-        }
+        camera: cameras
     })
 
     let postUI = new PostUI(THREE,postProcessing);
     let postFX = new PostFX(THREE,postProcessing);
+
+    postProcessing.postUI = postUI;
 
     document.dispatchEvent(new CustomEvent('glCreated'))
     postProcessing.enabled = true;
     postProcessing.cutToBlack();
     postProcessing.blurWorld(true)
     postProcessing.setPassActivation('unrealBloom', true)
+
+    postProcessing.cutToBlack(true)
     setTimeout(()=>{
         postProcessing.cutToBlack(true)
         postProcessing.blurWorld(false, ()=>{
@@ -314,7 +401,7 @@ let initializer = new Promise((resolve,reject)=>{
 
     world.defcmd('cameraType', (p)=>{
         console.log(p[1])
-        cameraControls.cameraType = p[1];
+        cameras.cameraType = p[1];
         //camera = cameraControls.getCamera();
     }
     )
@@ -330,8 +417,10 @@ let initializer = new Promise((resolve,reject)=>{
     let dt;
     let simAccum = 0;
     function render() {
+        if (rendererPaused)
+            return;
         let time = performance.now() / 1000;
-        cameraControls.update();
+        cameras.update();
 
         info.update(time)
 
@@ -346,29 +435,36 @@ let initializer = new Promise((resolve,reject)=>{
         lastTime = time;
 
         //skyEnv&&skyEnv.update()
+        updateControlsEvent.detail.dts = dt;
+        document.dispatchEvent(updateControlsEvent);
+
+        //skyEnv&&skyEnv.update()
         beforeRenderEvent.detail.dts = dt;
         document.dispatchEvent(beforeRenderEvent);
+
+        //skyEnv&&skyEnv.update()
+        justBeforeRenderEvent.detail.dts = dt;
+        document.dispatchEvent(justBeforeRenderEvent);
 
         if (postProcessing.enabled)
             postProcessing.render()
         else {
 
-            if (self.depthPrepassEnabled) {
+            if (self && self.depthPrepassEnabled) {
                 scene.overrideMaterial = depthPrepass;
-                renderer.render(scene, cameraControls.camera);
+                renderer.render(scene, cameras.current);
                 renderer.autoClear = renderer.autoClearColor = renderer.autoClearDepth = renderer.autoClearStencil = false;
                 scene.overrideMaterial = null;
-                renderer.render(scene, cameraControls.camera);
+                renderer.render(scene, cameras.current);
                 renderer.autoClear = renderer.autoClearColor = renderer.autoClearDepth = renderer.autoClearStencil = true;
             } else {
-                renderer.render(scene, cameraControls.camera);
+                renderer.render(scene, cameras.current);
             }
 
         }
         document.dispatchEvent(afterRenderEvent);
     }
-
-    animate();
+    renderer.setAnimationLoop(animate);
 }
 )
 
@@ -383,9 +479,9 @@ function Renderer(_cfg) {
 
 export default Renderer;
 
-Renderer.injectCSS = ()=>{
+Renderer.injectCSS = (css)=>{
 
-    let css = `
+    css = css || `
 body {
 	margin: 0;
 	background-color: #000;

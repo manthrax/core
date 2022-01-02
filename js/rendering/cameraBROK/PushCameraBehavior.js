@@ -12,7 +12,7 @@ export default function PushCameraBehavior({THREE,cameraControls, controls, rend
     let hasFocus = false;
     let mousemove = (mm)=>{
         if(mm.target!==renderer.domElement) return
-        let camera = cameraControls.camera;
+        let camera = cameraControls.cameraRig;
         hasFocus = mm.target === renderer.domElement
         let nx = (mm.pageX / window.innerWidth) - .5
         let ny = (mm.pageY / window.innerHeight) - .5
@@ -36,7 +36,7 @@ export default function PushCameraBehavior({THREE,cameraControls, controls, rend
     }    
 
     let update = ()=>{
-        let camera = cameraControls.camera;
+        let camera = cameraControls.cameraRig;
         if (!hasFocus)
             return
 

@@ -55,7 +55,7 @@ function MST(dim=3) {
   } else {
     let ndim = dim * dim * dim;
     //Build a random 3d node mesh .. connect all points to each other with edges...
-    for (let y = 0; y < ndim; y++) addNode(rnd() * 50, rnd() * 50,1); //
+    for (let y = 0; y < ndim; y++) addNode(rnd() * 50, rnd() * 50, rnd() * 50,);//1); //
 
     for (let y = 0; y < ndim; y++)
       for (let x = 0; x < ndim; x++) if (x != y) addEdge(x, y);

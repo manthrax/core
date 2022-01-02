@@ -1,24 +1,27 @@
 
 
-function ViewPersister(camera, controls) {
+function ViewPersister(cameras) {
+    
+if(true){
     try {
         let state = JSON.parse(localStorage.viewpointPersistence)
-        camera.position.copy(state.camera)
-        controls.target.copy(state.controls)
-        if(state.ortho&&camera.isOrthographicCamera){
+        cameras.current.position.copy(state.camera)
+        cameras.orbitControls.target.copy(state.controls)
+        if(state.ortho&&camera.current.isOrthographicCamera){
             camera.zoom = state.ortho.zoom;
         }
     } catch {
         delete localStorage.viewpointPersistence
     }
+}
     window.addEventListener('beforeunload', ()=>{
         let state={
-            camera: camera.position.clone(),
-            controls: controls.target.clone()
+            camera: cameras.current.position.clone(),
+            controls: cameras.orbitControls.target.clone()
         }
-        if(camera.isOrthographicCamera){
+        if(cameras.current.isOrthographicCamera){
             state.ortho={
-                zoom:camera.zoom
+                zoom:cameras.current.zoom
             }
         }
         localStorage.viewpointPersistence = JSON.stringify(state)

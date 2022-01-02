@@ -188,6 +188,9 @@ export default class World {
             this.objects[inst.userData.objectId] = obj;
             return inst;
         }
+
+
+        
         this.cloneObject = (obj)=>{
             let nob = {
                 src: obj.src,

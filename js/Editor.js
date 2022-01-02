@@ -2,7 +2,7 @@ import GridMat from "./rendering/components/GridMat.js"
 import OutlineMaterial from "./rendering/OutlineMaterial.js"
 import {TransformControls} from "https://threejs.org/examples/jsm/controls/TransformControls.js";
 
-export default function Editor({THREE, world, renderer, scene, cameraControls, controls}) {
+export default function Editor({THREE, world, renderer, scene, cameras, controls}) {
     let {floor} = Math;
     let buttons;
 
@@ -21,20 +21,34 @@ export default function Editor({THREE, world, renderer, scene, cameraControls, c
 
     transformWidget && scene.add(transformWidget);
 
-    let dragPlane = new THREE.Mesh(new THREE.PlaneBufferGeometry(world.gridSize * 20,world.gridSize * 20,2,2),gridMat)
+    //let dragPlane = new THREE.Mesh(new THREE.PlaneBufferGeometry(world.gridSize * 20,world.gridSize * 20,2,2),gridMat)
+
+    let dragPlane = new THREE.Mesh(new THREE.CircleGeometry(world.gridSize * 20,16),gridMat)
 
     dragPlane.position.y = .1
     dragPlane.rotation.x = Math.PI * -.5
 
-    const mouse = new THREE.Vector2();
-    let raycaster = new THREE.Raycaster()
+    let ed = this;
+
+    ed.raycastTargets=[];
+    
+    ed.raycastRecursive=false;
+    ed.raycast=(targets,recursive)=>{
+        return raycast(e, targets,recursive )
+    }
+
+
+    const mouse = ed.mouse = new THREE.Vector2();
+    let raycaster = ed.raycaster = this.raycaster = new THREE.Raycaster()
 
     let raycast = (e,grp,recursive=true)=>{
-
+        ed.raycastTime = performance.now();
         mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
         mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
-        raycaster.setFromCamera(mouse, cameraControls.camera)
-        return raycaster.intersectObjects(grp, recursive);
+        raycaster.setFromCamera(mouse, cameras.current)
+        let hits = raycaster.intersectObjects(grp, recursive);
+        ed.raycastTime = performance.now() - ed.raycastTime;
+        return hits;
     }
 
     let outlineMaterial = new OutlineMaterial(new THREE.MeshBasicMaterial({
@@ -135,7 +149,7 @@ let tv3 = new v3()
     }
 
     document.addEventListener('dblclick',(e)=>{
-        console.log('dbc')
+        //console.log('dbc')
         mousedown(e)
         if(dragObject && dragObject.view){
             trackTarget = (trackTarget == dragObject.view) ? null : dragObject.view;
@@ -175,13 +189,12 @@ let tv3 = new v3()
             controls.enabled = true;
         }
     }
-
     function mousedown(e) {
         if(e.target!==renderer.domElement){
             return;
         }
         buttons = e.buttons
-        let intersects = raycast(e, scene.children)
+        let intersects = raycast(e, ed.raycastTargets, ed.raycastRecursive )
         if (!e.shiftKey)
             while (world.selection.length)
                 select(world.selection[0], false)
@@ -230,7 +243,9 @@ let tv3 = new v3()
             //Only process first hit
         }
     }
-    let ed = {
+
+    ed = {
+        ...ed,
 
         set enabled(tf) {
             let fn = tf ? 'addEventListener' : 'removeEventListener'
@@ -239,7 +254,8 @@ let tv3 = new v3()
             window[fn]("mouseup", mouseup)
             window[fn]("mousedown", mousedown)
         },
-        update
+        update,
+        raycaster
     }
     ed.enabled = true;
     return ed;

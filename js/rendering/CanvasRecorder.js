@@ -24,7 +24,7 @@ CanvasRecorder( yourCanvas )
 
 /* globals main, MediaRecorder */
 
-let init = (canvas)=>{
+let init = (canvas, parent)=>{
 
     const mediaSource = new MediaSource();
     mediaSource.addEventListener('sourceopen', handleSourceOpen, false);
@@ -33,11 +33,11 @@ let init = (canvas)=>{
     let sourceBuffer;
 
     //canvas //document.querySelector('canvas');
-    const uiDiv = document.createElement('div')
-    document.body.appendChild(uiDiv)
+    const uiDiv = document.createElement('div');
+    (parent||document.body).appendChild(uiDiv)
     uiDiv.style.position = 'absolute'
-    uiDiv.style.left = uiDiv.style.top = '10px'
-
+    uiDiv.style.left = uiDiv.style.top = '2px';
+    uiDiv.style.zIndex=1000
 
 
     let stream
@@ -49,21 +49,21 @@ let str_download = '↓'
 let str_open = '+'
 let str_close = '❎'
     uiDiv.innerHTML = `
-<div style='zIndex:1000'>
-<button id = 'record'>${str_record}</button>
-<button id = 'play'>${str_play}</button>
-<button id = 'download'>${str_download}</button>
-<button id = 'close'>${str_close}</button>
+<div' id='canvas-recorder'>
+<span id = 'record'>${str_record}</span>
+<span id = 'play'>${str_play}</span>
+<span id = 'download'>${str_download}</span>
+<span id = 'close'>${str_close}</span>
 </br>
 <video style='width:640px;height:480px;display:none;' id='video'></video>
 </div>
 `
     const video = document.querySelector('video');
 
-    const recordButton = document.querySelector('button#record');
-    const playButton = document.querySelector('button#play');
-    const downloadButton = document.querySelector('button#download');
-    const closeButton = document.querySelector('button#close');
+    const recordButton = document.querySelector('span#record');
+    const playButton = document.querySelector('span#play');
+    const downloadButton = document.querySelector('span#download');
+    const closeButton = document.querySelector('span#close');
 
     recordButton.onclick = toggleRecording;
     playButton.onclick = play;

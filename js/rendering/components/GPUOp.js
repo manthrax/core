@@ -13,7 +13,7 @@ let THREE,renderer,camera
         })
     }
     function GPUOp(params) {
-        let u = params.uniforms
+        let u = this.uniforms = params.uniforms
         let udef = '';
         if (u)
             for (let k in u)

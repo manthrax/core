@@ -1,7 +1,7 @@
 
 let THREE;
 
-class CameraBehavior{
+class FCameraBehavior{
     weight=1
     camera = new THREE.PerspectiveCamera(15,1,.01,3)
     headOffset = new THREE.Vector3( 0, 0.1, 0)
